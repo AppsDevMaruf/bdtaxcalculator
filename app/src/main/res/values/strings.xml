@@ -1,0 +1,43 @@
+<resources>
+    <string name="app_name">বাংলাদেশ আয়কর ক্যালকুলেটর</string>
+
+    <!-- Screen Titles -->
+    <string name="title_tax_calculator">আয়কর ক্যালকুলেটর</string>
+    <string name="title_year">২০২৫-২৬</string>
+
+    <!-- Taxpayer Types -->
+    <string name="taxpayer_general">সাধারণ করদাতা</string>
+    <string name="taxpayer_women">মহিলা করদাতা</string>
+    <string name="taxpayer_senior">সিনিয়র সিটিজেন (৬৫+)</string>
+    <string name="taxpayer_disabled">প্রতিবন্ধী ব্যক্তি</string>
+    <string name="taxpayer_freedom_fighter">মুক্তিযোদ্ধা</string>
+
+    <!-- Labels -->
+    <string name="label_taxpayer_type">করদাতার ধরন</string>
+    <string name="label_taxable_income">করযোগ্য আয়</string>
+    <string name="label_income_amount">আয়ের পরিমাণ (টাকা)</string>
+    <string name="label_tax_free_limit">করমুক্ত সীমা</string>
+    <string name="label_total_tax">মোট আয়কর</string>
+    <string name="label_tax_breakdown">কর হিসাবের বিস্তারিত</string>
+    <string name="label_tax_slabs">কর স্ল্যাব ২০২৫-২৬</string>
+
+    <!-- Messages -->
+    <string name="msg_tax_free">আপনার আয় করমুক্ত সীমার মধ্যে</string>
+    <string name="msg_no_tax">আপনাকে কোন আয়কর দিতে হবে না।</string>
+    <string name="msg_minimum_tax">ন্যূনতম কর: ৫,০০০ টাকা প্রযোজ্য</string>
+
+    <!-- Info Messages -->
+    <string name="info_title">গুরুত্বপূর্ণ তথ্য</string>
+    <string name="info_content">• এই ক্যালকুলেটর ২০২৫-২৬ অর্থবছরের কর স্ল্যাব অনুযায়ী তৈরি\n• ন্যূনতম কর: ৫,০০০ টাকা (করমুক্ত সীমা অতিক্রম করলে)\n• সর্বোচ্চ কর হার: ৩০%\n• প্রকৃত কর জমার জন্য NBR এর সাথে যোগাযোগ করুন</string>
+
+    <!-- Footer -->
+    <string name="footer_text">বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_info">তথ্য</string>
+    <string name="cd_selected">নির্বাচিত</string>
+    <string name="cd_person_icon">ব্যক্তি আইকন</string>
+    <string name="cd_balance_icon">ব্যালেন্স আইকন</string>
+    <string name="cd_receipt_icon">রসিদ আইকন</string>
+    <string name="cd_assessment_icon">মূল্যায়ন আইকন</string>
+</resources>
