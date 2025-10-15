@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
@@ -80,11 +81,14 @@ data class TaxBreakdown(
     val tax: Double
 )
 
+// Update TaxResult data class to include rebate information
 data class TaxResult(
     val totalTax: Double,
     val breakdown: List<TaxBreakdown>,
     val taxableAmount: Long,
-    val isMinimumTax: Boolean
+    val isMinimumTax: Boolean,
+    val investmentRebate: Double = 0.0, // Add this
+    val taxAfterRebate: Double = 0.0    // Add this
 )
 
 data class InvestmentInputData(
@@ -113,6 +117,7 @@ enum class CalculatorMode {
     TAXABLE_INCOME, GROSS_SALARY
 }
 
+// Update the main TaxCalculatorScreen to use Double for investmentRebate
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaxCalculatorScreen() {
@@ -134,7 +139,6 @@ fun TaxCalculatorScreen() {
 
     val currentType = taxpayerTypes.find { it.id == selectedType }!!
 
-    // ✅ এখন আমরা calculateSalaryBreakdown()-এ yearly bonus পাস করব সরাসরি টাকায়
     val salaryBreakdown = if (mode == CalculatorMode.GROSS_SALARY) {
         calculateSalaryBreakdown(
             grossSalary = grossSalary.toLongOrNull() ?: 0L,
@@ -142,16 +146,12 @@ fun TaxCalculatorScreen() {
         )
     } else null
 
-    // ✅ ট্যাক্সেবল ইনকাম
     val incomeValue = if (mode == CalculatorMode.GROSS_SALARY) {
         salaryBreakdown?.taxableIncome ?: 0L
     } else {
         income.toLongOrNull() ?: 0L
     }
 
-    val result = calculateTax(incomeValue, currentType.taxFreeLimit)
-
-    // Investment Inputs
     var investments by remember {
         mutableStateOf(
             listOf(
@@ -164,8 +164,15 @@ fun TaxCalculatorScreen() {
         )
     }
 
+    // Calculate investment rebate as Double
+    val investmentRebate = calculateInvestmentRebate(investments, incomeValue)
+
+    // Calculate tax with investment rebate
+    val result = calculateTax(incomeValue, currentType.taxFreeLimit, investmentRebate)
+
     Scaffold(
         topBar = {
+            // ... rest of the Scaffold code remains the same
             TopAppBar(
                 title = {
                     Column {
@@ -239,7 +246,6 @@ fun TaxCalculatorScreen() {
                     taxFreeLimit = currentType.taxFreeLimit
                 )
             } else {
-                // ✅ আপডেট করা GrossSalaryInput
                 GrossSalaryInput(
                     grossSalary = grossSalary,
                     yearlyBonus = yearlyBonus,
@@ -251,7 +257,13 @@ fun TaxCalculatorScreen() {
                     SalaryBreakdownCard(salaryBreakdown)
                 }
             }
-            // Investment Input Section
+
+            if (incomeValue > currentType.taxFreeLimit) {
+                RecommendedInvestmentCard(
+                    taxableIncome = incomeValue,
+                    currentRebate = investmentRebate
+                )
+            }
             InvestmentInputSection(
                 investments = investments,
                 onInvestmentChange = { type, value ->
@@ -262,13 +274,21 @@ fun TaxCalculatorScreen() {
                 taxableIncome = incomeValue
             )
 
+
+
             if (incomeValue <= currentType.taxFreeLimit) {
                 TaxFreeCard(income = incomeValue, limit = currentType.taxFreeLimit)
             } else {
-                TaxResultCard(result = result, taxFreeLimit = currentType.taxFreeLimit)
-                TaxBreakdownCard(result = result)
+                TaxResultCard(
+                    result = result,
+                    taxFreeLimit = currentType.taxFreeLimit,
+                    investmentRebate = investmentRebate
+                )
+                TaxBreakdownCard(
+                    result = result,
+                    investmentRebate = investmentRebate
+                )
             }
-
 
             TaxSlabsCard()
 
@@ -282,7 +302,6 @@ fun TaxCalculatorScreen() {
         }
     }
 }
-
 
 @Composable
 fun ModeSelectionCard(
@@ -463,12 +482,21 @@ fun GrossSalaryInput(
     }
 }
 
+// Updated InvestmentInputSection to show breakdown
 @Composable
 fun InvestmentInputSection(
     investments: List<InvestmentInputData>,
-    onInvestmentChange: (String, String) -> Unit, // type, newValue
+    onInvestmentChange: (String, String) -> Unit,
     taxableIncome: Long
 ) {
+    val totalInvestment = investments.sumOf { inv ->
+        inv.amount.toLongOrNull() ?: 0L
+    }
+
+    val threePercentOfTaxable = taxableIncome * 0.03
+    val fifteenPercentOfInvestment = totalInvestment * 0.15
+    val fixedCap = 1_000_000.0
+
     val rebate = calculateInvestmentRebate(investments, taxableIncome)
 
     Card(
@@ -514,24 +542,90 @@ fun InvestmentInputSection(
                 Spacer(Modifier.height(8.dp))
             }
 
-            Divider(color = Color(0xFF81C784), thickness = 1.dp)
-            Spacer(Modifier.height(8.dp))
+            if (totalInvestment > 0) {
+                Divider(color = Color(0xFF81C784), thickness = 1.dp)
+                Spacer(Modifier.height(12.dp))
 
-            Text(
-                text = "মোট ট্যাক্স রিবেট: ৳${rebate}",
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1B5E20),
-                fontSize = 16.sp
-            )
-            Text(
-                text = "সর্বোচ্চ রিবেট সীমা: আয়-এর ২৫% বা ১৫ লক্ষ (যেটা কম)",
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
+                // Show calculation breakdown
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "রিবেট হিসাব:",
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1B5E20),
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("৩% করযোগ্য আয়ের:", fontSize = 12.sp, color = Color.Gray)
+                            Text(
+                                "৳${formatBengaliNumber(threePercentOfTaxable.toLong())}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("১৫% বিনিয়োগের:", fontSize = 12.sp, color = Color.Gray)
+                            Text(
+                                "৳${formatBengaliNumber(fifteenPercentOfInvestment.toLong())}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("সর্বোচ্চ সীমা:", fontSize = 12.sp, color = Color.Gray)
+                            Text(
+                                "৳${formatBengaliNumber(fixedCap.toLong())}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        Divider(color = Color(0xFF4CAF50), thickness = 1.dp)
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "মোট ট্যাক্স রিবেট (সর্বনিম্ন):",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1B5E20),
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                "৳${formatBengaliNumber(rebate.toLong())}",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7D32),
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
+// ✅ Enhanced SalaryBreakdownCard to show exemption details
 @Composable
 fun SalaryBreakdownCard(breakdown: SalaryBreakdown) {
     Card(
@@ -576,10 +670,10 @@ fun SalaryBreakdownCard(breakdown: SalaryBreakdown) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    SalaryItem("মূল বেতন (Basic)", breakdown.basicSalary)
-                    SalaryItem("বাড়ি ভাড়া (House Rent)", breakdown.houseRent, isExempt = true)
-                    SalaryItem("চিকিৎসা (Medical)", breakdown.medical, isExempt = true)
-                    SalaryItem("যাতায়াত (Conveyance)", breakdown.conveyance, isExempt = true)
+                    SalaryItem("মূল বেতন (৫০%)", breakdown.basicSalary)
+                    SalaryItem("বাড়ি ভাড়া (বেসিকের ৫০%)", breakdown.houseRent, isExempt = true)
+                    SalaryItem("চিকিৎসা (বেসিকের ১০%)", breakdown.medical, isExempt = true)
+                    SalaryItem("যাতায়াত (৫%)", breakdown.conveyance, isExempt = true)
                     SalaryItem("অন্যান্য ভাতা", breakdown.otherAllowances)
 
                     HorizontalDivider(
@@ -610,7 +704,7 @@ fun SalaryBreakdownCard(breakdown: SalaryBreakdown) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Yearly Summary
+            // Yearly Summary with Exemption Details
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFFE3F2FD)
@@ -635,7 +729,80 @@ fun SalaryBreakdownCard(breakdown: SalaryBreakdown) {
                     )
 
                     YearlyItem("মোট বার্ষিক আয়", breakdown.totalIncome, isBold = true)
-                    YearlyItem("(-) মোট ছাড়", breakdown.totalExemption, isNegative = true)
+
+                    // Show exemption calculation
+                    val yearlyHouseRent = breakdown.houseRent * 12
+                    val yearlyMedical = breakdown.medical * 12
+                    val yearlyConveyance = breakdown.conveyance * 12
+                    val oneThirdIncome = breakdown.totalIncome / 3
+
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "ছাড়ের হিসাব:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1565C0)
+                    )
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• বাড়ি ভাড়া (≤৩ লক্ষ):", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            formatBengaliNumber(minOf(yearlyHouseRent, 300000L)),
+                            fontSize = 11.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• চিকিৎসা (≤১.২ লক্ষ):", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            formatBengaliNumber(minOf(yearlyMedical, 120000L)),
+                            fontSize = 11.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• যাতায়াত (≤৩০ হাজার):", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            formatBengaliNumber(minOf(yearlyConveyance, 30000L)),
+                            fontSize = 11.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• আয়ের ১/৩:", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            formatBengaliNumber(oneThirdIncome),
+                            fontSize = 11.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("• সর্বোচ্চ সীমা:", fontSize = 11.sp, color = Color.Gray)
+                        Text(
+                            "৫,০০,০০০",
+                            fontSize = 11.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+                    YearlyItem("(-) মোট ছাড় (সর্বনিম্ন)", breakdown.totalExemption, isNegative = true)
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -729,6 +896,8 @@ fun YearlyItem(
     }
 }
 
+// Updated InfoCard with correct information
+// ✅ Updated InfoCard with correct percentages
 @Composable
 fun InfoCard() {
     Card(
@@ -757,15 +926,22 @@ fun InfoCard() {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "• মোট বেতন থেকে স্বয়ংক্রিয় হিসাব করা হয়\n" +
-                        "• বেসিক = মোট বেতনের ৫৫%\n" +
-                        "• বাড়ি ভাড়া ছাড় = বেসিকের ৫০% বা ৩০,০০০ টাকা\n" +
-                        "• চিকিৎসা ছাড় = ১০% বা ১,২০,০০০ টাকা\n" +
-                        "• যাতায়াত ছাড় = ৩০,০০০ টাকা পর্যন্ত\n" +
-                        "• এই ক্যালকুলেটর ২০২৫-২৬ অর্থবছরের কর স্ল্যাব অনুযায়ী",
-                fontSize = 12.sp,
+                "📊 বেতন বিভাজন:\n" +
+                        "• বেসিক = মোট বেতনের ৫০%\n" +
+                        "• বাড়ি ভাড়া = বেসিকের ৫০%\n" +
+                        "• চিকিৎসা = বেসিকের ১০%\n" +
+                        "• যাতায়াত = মোট বেতনের ৫%\n\n" +
+                        "💰 ছাড়ের নিয়ম:\n" +
+                        "• বাড়ি ভাড়া: সর্বোচ্চ ৩,০০,০০০ টাকা\n" +
+                        "• চিকিৎসা: সর্বোচ্চ ১,২০,০০০ টাকা\n" +
+                        "• যাতায়াত: সর্বোচ্চ ৩০,০০০ টাকা\n" +
+                        "• মোট ছাড় = সর্বনিম্ন (উপরের যোগফল, আয়ের ১/৩, ৫,০০,০০০)\n\n" +
+                        "🎯 বিনিয়োগ রিবেট:\n" +
+                        "• সর্বনিম্ন (করযোগ্য আয়ের ৩%, বিনিয়োগের ১৫%, ১০ লক্ষ)\n\n" +
+                        "📅 এই ক্যালকুলেটর ২০২৫-২৬ অর্থবছরের কর স্ল্যাব অনুযায়ী",
+                fontSize = 11.sp,
                 color = Color(0xFF1565C0),
-                lineHeight = 18.sp
+                lineHeight = 16.sp
             )
         }
     }
@@ -977,8 +1153,10 @@ fun TaxFreeCard(income: Long, limit: Long) {
     }
 }
 
+
+// Update the TaxResultCard composable to handle Double values properly
 @Composable
-fun TaxResultCard(result: TaxResult, taxFreeLimit: Long) {
+fun TaxResultCard(result: TaxResult, taxFreeLimit: Long, investmentRebate: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -1008,17 +1186,27 @@ fun TaxResultCard(result: TaxResult, taxFreeLimit: Long) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "${formatBengaliNumber(result.totalTax.toLong())} ৳",
+                    "${formatBengaliNumber(result.taxAfterRebate.toLong())} ৳",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "(${NumberFormat.getNumberInstance(Locale.US).format(result.totalTax.toLong())} BDT)",
+                    "(${NumberFormat.getNumberInstance(Locale.US).format(result.taxAfterRebate.toLong())} BDT)",
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.8f)
                 )
+
+                // Show rebate information if applicable
+                if (investmentRebate > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "বিনিয়োগ রিবেট: ${formatBengaliNumber(investmentRebate.toLong())} ৳",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
 
                 if (result.isMinimumTax) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1063,12 +1251,23 @@ fun TaxResultCard(result: TaxResult, taxFreeLimit: Long) {
                 Text("করযোগ্য আয়:", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text("${formatBengaliNumber(result.taxableAmount)} ৳", fontSize = 13.sp)
             }
+            if (investmentRebate > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("বিনিয়োগ রিবেট:", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("${formatBengaliNumber(investmentRebate.toLong())} ৳", fontSize = 13.sp, color = Color(0xFF2E7D32))
+                }
+            }
         }
     }
 }
 
+// Update the TaxBreakdownCard composable
 @Composable
-fun TaxBreakdownCard(result: TaxResult) {
+fun TaxBreakdownCard(result: TaxResult, investmentRebate: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -1101,6 +1300,39 @@ fun TaxBreakdownCard(result: TaxResult) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
+            // Show rebate deduction if applicable
+            if (investmentRebate > 0) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFE8F5E9)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF4CAF50))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "বিনিয়োগ রিবেট কাটা:",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1B5E20)
+                        )
+                        Text(
+                            "- ${formatBengaliNumber(investmentRebate.toLong())} ৳",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
                 thickness = 2.dp,
@@ -1119,7 +1351,7 @@ fun TaxBreakdownCard(result: TaxResult) {
                     color = Color(0xFF1B5E20)
                 )
                 Text(
-                    "${formatBengaliNumber(result.totalTax.toLong())} ৳",
+                    "${formatBengaliNumber(result.taxAfterRebate.toLong())} ৳",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF2E7D32)
@@ -1195,6 +1427,156 @@ fun BreakdownItem(item: TaxBreakdown) {
     }
 }
 
+// ✅ NEW: Recommended Investment Card
+@Composable
+fun RecommendedInvestmentCard(taxableIncome: Long, currentRebate: Double) {
+    // Calculate optimal investment for maximum rebate
+    val threePercentOfTaxable = taxableIncome * 0.03
+    val maxRebatePossible = minOf(threePercentOfTaxable, 1_000_000.0)
+
+    // To get max rebate: rebate = investment × 0.15
+    // So: investment = rebate / 0.15
+    val optimalInvestment = (maxRebatePossible / 0.15).toLong()
+
+    // Calculate potential tax savings
+    val potentialSavings = maxRebatePossible - currentRebate
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF1565C0),
+                            Color(0xFF0D47A1)
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        "প্রস্তাবিত বিনিয়োগ",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Optimal Investment Amount
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            "সর্বোচ্চ ছাড়ের জন্য বিনিয়োগ করুন:",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "৳${formatBengaliNumber(optimalInvestment)}",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFEB3B)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Max Rebate Possible
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "সর্বোচ্চ সম্ভাব্য ট্যাক্স রিবেট:",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                            Text(
+                                "৳${formatBengaliNumber(maxRebatePossible.toLong())}",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4CAF50)
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.TrendingUp,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+
+                // Investment Options
+                Text(
+                    "💡 বিনিয়োগের বিকল্প:",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val investmentOptions = listOf(
+                    "DSE শেয়ার - ১৫% রিবেট",
+                    "সঞ্চয়পত্র - ১০% রিবেট",
+                    "DPS - ১৫% রিবেট",
+                    "মিউচুয়াল ফান্ড - ১৫% রিবেট",
+                    "লাইফ ইন্স্যুরেন্স - ১০% রিবেট"
+                )
+
+                investmentOptions.forEach { option ->
+                    Row(
+                        modifier = Modifier.padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("•", color = Color(0xFF4CAF50), fontSize = 16.sp)
+                        Text(
+                            option,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 fun TaxSlabsCard() {
     Card(
@@ -1283,30 +1665,50 @@ fun TaxSlabsCard() {
     }
 }
 
+// Updated calculateSalaryBreakdown function with correct formula
+// ✅ CORRECTED: calculateSalaryBreakdown function
 fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakdown {
-    // Standard breakdown percentages
-    val basicPercentage = 0.55 // 55% of gross
-    val houseRentPercentage = 0.25 // 25% of gross
-    val medicalPercentage = 0.10 // 10% of gross
-    val conveyancePercentage = 0.05 // 5% of gross
+    // Basic = 50% of Gross
+    val basicSalary = (grossSalary * 0.50).toLong()
 
-    val basicSalary = (grossSalary * basicPercentage).toLong()
-    val houseRent = (grossSalary * houseRentPercentage).toLong()
-    val medical = (grossSalary * medicalPercentage).toLong()
-    val conveyance = (grossSalary * conveyancePercentage).toLong()
+    // House Rent = 50% of Basic (NOT 50% of gross)
+    val houseRent = (basicSalary * 0.50).toLong()
+
+    // Medical = 10% of Basic (NOT 10% of gross)
+    val medical = (basicSalary * 0.10).toLong()
+
+    // Conveyance = 5% of Gross
+    val conveyance = (grossSalary * 0.05).toLong()
+
+    // Other allowances = remainder
     val otherAllowances = grossSalary - (basicSalary + houseRent + medical + conveyance)
 
-    // Yearly calculations
-    val monthlySalaryYearly = grossSalary * 12
-    val totalIncome = monthlySalaryYearly + yearlyBonus
+    // ✅ CORRECTED: Yearly calculations
+    val yearlyBasic = basicSalary * 12
+    val yearlyHouseRent = houseRent * 12
+    val yearlyMedical = medical * 12
+    val yearlyConveyance = conveyance * 12
+    val yearlyOther = otherAllowances * 12
 
-    // Exemptions (2025-26 rules)
-    val houseRentExemption = minOf((basicSalary * 12 * 0.50).toLong(), 300000L)
-    val medicalExemption = minOf((medical * 12 * 0.10).toLong(), 120000L)
-    val conveyanceExemption = minOf(conveyance * 12, 30000L)
+    // Total Yearly Income = All components × 12 + Bonus
+    val totalIncome = yearlyBasic + yearlyHouseRent + yearlyMedical + yearlyConveyance + yearlyOther + yearlyBonus
 
-    val totalExemption = houseRentExemption + medicalExemption + conveyanceExemption
-    val taxableIncome = maxOf(0, totalIncome - totalExemption)
+    // ✅ CORRECTED: Exemptions calculation
+    // Individual exemption limits
+    val houseRentExemptionLimit = minOf(yearlyHouseRent, 300000L)
+    val medicalExemptionLimit = minOf(yearlyMedical, 120000L)
+    val conveyanceExemptionLimit = minOf(yearlyConveyance, 30000L)
+
+    // Total of individual exemptions
+    val totalIndividualExemptions = houseRentExemptionLimit + medicalExemptionLimit + conveyanceExemptionLimit
+
+    // ✅ Apply 1/3rd rule: Exemption = lower of (total individual exemptions, 1/3 of income, 500,000)
+    val oneThirdIncome = totalIncome / 3
+    val exemptionMin = minOf(oneThirdIncome, 500000L)
+    // TODO: need info from farhan bhai
+    //val totalExemption = minOf(totalIndividualExemptions, exemptionCap)
+
+    val taxableIncome = maxOf(0, totalIncome - exemptionMin)
 
     return SalaryBreakdown(
         grossSalary = grossSalary,
@@ -1317,28 +1719,35 @@ fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakd
         otherAllowances = otherAllowances,
         yearlyBonus = yearlyBonus,
         totalIncome = totalIncome,
-        totalExemption = totalExemption,
+        totalExemption = exemptionMin,
         taxableIncome = taxableIncome
     )
 }
 
-fun calculateInvestmentRebate(investments: List<InvestmentInputData>, taxableIncome: Long): Long {
-    val rebateSum = investments.sumOf { inv ->
-        val invested = inv.amount.toLongOrNull() ?: 0L
-        val allowable = invested * inv.allowablePercentage
-        val rebate = allowable * inv.taxRate
-        rebate.toLong()
+// Update the calculateInvestmentRebate function to return Double
+fun calculateInvestmentRebate(investments: List<InvestmentInputData>, taxableIncome: Long): Double {
+    // Calculate total investment amount
+    val totalInvestment = investments.sumOf { inv ->
+        inv.amount.toLongOrNull() ?: 0L
     }
 
-    // Rule: Max rebate = min(25% of taxable income, 15 lakh)
-    val cap = minOf((taxableIncome * 0.25).toLong(), 1_500_000L)
-    return minOf(rebateSum, cap)
+    // Rule: Rebate = Lowest of:
+    // 1. 3% of taxable income
+    // 2. 15% of actual investment
+    // 3. Fixed 10 Lac (1,000,000 BDT)
+
+    val threePercentOfTaxable = taxableIncome * 0.03
+    val fifteenPercentOfInvestment = totalInvestment * 0.15
+    val fixedCap = 1_000_000.0
+
+    return minOf(threePercentOfTaxable, fifteenPercentOfInvestment, fixedCap)
 }
 
 
-fun calculateTax(income: Long, taxFreeLimit: Long): TaxResult {
+// Update calculateTax function to include investment rebate
+fun calculateTax(income: Long, taxFreeLimit: Long, investmentRebate: Double = 0.0): TaxResult {
     if (income <= taxFreeLimit) {
-        return TaxResult(0.0, emptyList(), 0, false)
+        return TaxResult(0.0, emptyList(), 0, false, investmentRebate, 0.0)
     }
 
     var tax = 0.0
@@ -1377,13 +1786,18 @@ fun calculateTax(income: Long, taxFreeLimit: Long): TaxResult {
     }
 
     val minimumTax = 5000.0
-    val finalTax = maxOf(tax, minimumTax)
+    val taxBeforeRebate = maxOf(tax, minimumTax)
+
+    // Apply investment rebate
+    val taxAfterRebate = maxOf(taxBeforeRebate - investmentRebate, 0.0)
 
     return TaxResult(
-        totalTax = finalTax,
+        totalTax = taxAfterRebate, // Now this is the final tax after rebate
         breakdown = breakdown,
         taxableAmount = income - taxFreeLimit,
-        isMinimumTax = tax < minimumTax && tax > 0
+        isMinimumTax = tax < minimumTax && tax > 0,
+        investmentRebate = investmentRebate,
+        taxAfterRebate = taxAfterRebate
     )
 }
 
@@ -1394,3 +1808,16 @@ fun formatBengaliNumber(number: Long): String {
         if (char.isDigit()) bengaliDigits[char.toString().toInt()] else char
     }.joinToString("")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
