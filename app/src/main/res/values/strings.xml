@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">বাংলাদেশ আয়কর ক্যালকুলেটর</string>
+    <string name="app_name">BD Tax Calculator</string>
 
     <!-- Screen Titles -->
     <string name="title_tax_calculator">আয়কর ক্যালকুলেটর</string>
