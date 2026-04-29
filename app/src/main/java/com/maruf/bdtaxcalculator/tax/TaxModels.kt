@@ -3,7 +3,8 @@ package com.maruf.bdtaxcalculator.tax
 data class TaxpayerType(
     val id: String,
     val label: String,
-    val taxFreeLimit: Long
+    val taxFreeLimit: Long,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 )
 
 data class TaxBreakdown(

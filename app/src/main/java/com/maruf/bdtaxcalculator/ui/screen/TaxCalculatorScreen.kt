@@ -1,17 +1,22 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -592,6 +598,9 @@ fun CurrencyInputField(
 
 @Composable
 private fun SalaryBreakdownCard(salary: SalaryBreakdown) {
+    var isMonthlyExpanded by rememberSaveable { mutableStateOf(false) }
+    var isYearlyExpanded by rememberSaveable { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -601,32 +610,73 @@ private fun SalaryBreakdownCard(salary: SalaryBreakdown) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SectionLabel("বেতন বিভাজন", "আপনার মাসিক ও বাৎসরিক আয়ের বিস্তারিত")
 
-            DetailPanel("মাসিক বিভাজন", MaterialTheme.colorScheme.primary) {
+            DetailPanel(
+                title = "মাসিক বিভাজন",
+                color = MaterialTheme.colorScheme.primary,
+                expanded = isMonthlyExpanded,
+                onToggle = { isMonthlyExpanded = !isMonthlyExpanded },
+                summaryContent = {
+                    SalaryItem("মোট মাসিক", salary.grossSalary, isTotal = true)
+                }
+            ) {
                 SalaryItem("মূল বেতন (৬০%)", salary.basicSalary)
                 SalaryItem("বাড়ি ভাড়া (২৫%)", salary.houseRent)
                 SalaryItem("চিকিৎসা (১০%)", salary.medical)
                 SalaryItem("যাতায়াত (৫%)", salary.conveyance)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = CalculatorDivider)
-                SalaryItem("মোট মাসিক", salary.grossSalary, isTotal = true)
             }
 
-            DetailPanel("বাৎসরিক বিশ্লেষণ", CalculatorInfo) {
+            DetailPanel(
+                title = "বাৎসরিক বিশ্লেষণ",
+                color = CalculatorInfo,
+                expanded = isYearlyExpanded,
+                onToggle = { isYearlyExpanded = !isYearlyExpanded },
+                summaryContent = {
+                    YearlyItem("নিট করযোগ্য আয়", salary.taxableIncome, isTotal = true)
+                }
+            ) {
                 YearlyItem("মোট বাৎসরিক বেতন", salary.totalIncome)
                 YearlyItem("মোট বোনাস", salary.yearlyBonus)
                 YearlyItem("স্ট্যান্ডার্ড ছাড়", salary.totalExemption, isExempt = true)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = CalculatorDivider)
-                YearlyItem("নিট করযোগ্য আয়", salary.taxableIncome, isTotal = true)
             }
         }
     }
 }
 
 @Composable
-private fun DetailPanel(title: String, color: Color, content: @Composable ColumnScope.() -> Unit) {
+private fun DetailPanel(
+    title: String,
+    color: Color,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    summaryContent: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Box(modifier = Modifier.size(6.dp, 16.dp).background(color, RoundedCornerShape(2.dp)))
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = TiroBanglaFontFamily)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                if (expanded) "কম দেখুন" else "বিস্তারিত",
+                fontSize = 11.sp,
+                color = CalculatorMuted,
+                fontWeight = FontWeight.Medium,
+                fontFamily = TiroBanglaFontFamily
+            )
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = if (expanded) "বন্ধ করুন" else "খুলুন",
+                tint = color,
+                modifier = Modifier
+                    .size(18.dp)
+                    .graphicsLayer(rotationZ = if (expanded) 90f else 0f)
+            )
         }
         Surface(
             color = CalculatorPanel,
@@ -634,7 +684,13 @@ private fun DetailPanel(title: String, color: Color, content: @Composable Column
             border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorDivider)
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                content()
+                AnimatedVisibility(visible = expanded) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        content()
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = CalculatorDivider)
+                    }
+                }
+                summaryContent()
             }
         }
     }
@@ -855,7 +911,9 @@ private fun TaxpayerTypeSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionLabel("করদাতার শ্রেণী", "আপনার করদাতার শ্রেণী নির্বাচন করুন")
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             types.forEach { type ->
@@ -876,30 +934,82 @@ private fun TaxpayerTypeItem(
     onSelect: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onSelect),
-        color = if (isSelected) MaterialTheme.colorScheme.onBackground else CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.onBackground else CalculatorBorder)
+        modifier = Modifier
+            .width(110.dp)
+            .height(130.dp)
+            .clickable(onClick = onSelect),
+        color = if (isSelected) CalculatorSuccess.copy(alpha = 0.08f) else CalculatorSurfaceAlt,
+        shape = RoundedCornerShape(18.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) CalculatorSuccess else CalculatorBorder
+        )
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                type.label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-                fontFamily = TiroBanglaFontFamily
-            )
-            Text(
-                formatBengaliNumber(type.taxFreeLimit),
-                fontSize = 10.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else CalculatorMuted,
-                fontFamily = TiroBanglaFontFamily
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Icon/Image Container
+                Surface(
+                    modifier = Modifier.size(54.dp),
+                    shape = CircleShape,
+                    color = if (isSelected) CalculatorSuccess.copy(alpha = 0.15f) else CalculatorDivider
+                ) {
+                    if (type.icon != null) {
+                        Icon(
+                            imageVector = type.icon,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .fillMaxSize(),
+                            tint = if (isSelected) CalculatorSuccess else CalculatorMuted
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    type.label,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                    color = if (isSelected) CalculatorInk else CalculatorMuted,
+                    textAlign = TextAlign.Center,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 2
+                )
+                
+                Text(
+                    "করমুক্ত: ${formatBengaliNumber(type.taxFreeLimit / 1000)}k",
+                    fontSize = 10.sp,
+                    color = if (isSelected) CalculatorSuccess else CalculatorMutedSoft,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+
+            // Selection Indicator (Checkmark)
+            if (isSelected) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(18.dp),
+                    shape = CircleShape,
+                    color = CalculatorSuccess
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.padding(2.dp),
+                        tint = Color.White
+                    )
+                }
+            }
         }
     }
 }

@@ -1,5 +1,12 @@
 package com.maruf.bdtaxcalculator.tax
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Accessible
+import androidx.compose.material.icons.filled.Elderly
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Woman
+
 object TaxDefaults {
     const val taxYearLabel = "২০২৫-২৬"
     const val maxHouseRentExemption = 300_000L
@@ -12,11 +19,11 @@ object TaxDefaults {
     const val investmentRebateRate = 0.15
 
     val taxpayerTypes = listOf(
-        TaxpayerType("general", "সাধারণ করদাতা", 375_000L),
-        TaxpayerType("women", "মহিলা করদাতা", 400_000L),
-        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 400_000L),
-        TaxpayerType("disabled", "প্রতিবন্ধী ব্যক্তি", 475_000L),
-        TaxpayerType("freedomFighter", "মুক্তিযোদ্ধা", 500_000L)
+        TaxpayerType("general", "সাধারণ করদাতা", 375_000L, Icons.Default.Person),
+        TaxpayerType("women", "মহিলা করদাতা", 400_000L, Icons.Default.Woman),
+        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 400_000L, Icons.Default.Elderly),
+        TaxpayerType("disabled", "প্রতিবন্ধী ব্যক্তি", 475_000L, Icons.AutoMirrored.Filled.Accessible),
+        TaxpayerType("freedomFighter", "মুক্তিযোদ্ধা", 500_000L, Icons.Default.MilitaryTech)
     )
 
     val investmentOptions = listOf(
