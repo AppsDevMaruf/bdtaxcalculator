@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maruf.bdtaxcalculator.tax.InvestmentInputData
@@ -460,8 +461,8 @@ private fun CalculatorInputHub(
 @Composable
 private fun SectionLabel(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = CalculatorInk, fontFamily = TiroBanglaFontFamily)
-        Text(subtitle, fontSize = 11.sp, color = CalculatorMutedSoft, fontFamily = TiroBanglaFontFamily)
+        Text(title, fontSize = 15.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = CalculatorInk, fontFamily = TiroBanglaFontFamily)
+        Text(subtitle, fontSize = 11.sp,lineHeight = 16.sp, color = CalculatorMutedSoft, fontFamily = TiroBanglaFontFamily)
     }
 }
 
@@ -990,17 +991,19 @@ private fun TaxpayerTypeItem(
                 Text(
                     type.label,
                     fontSize = 10.sp,
-                    lineHeight = 12.sp,
+                    lineHeight = 10.sp,
                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                     color = if (isSelected) CalculatorInk else CalculatorMuted,
                     textAlign = TextAlign.Center,
                     fontFamily = TiroBanglaFontFamily,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Text(
                     "করমুক্ত: ${formatBengaliNumber(type.taxFreeLimit / 1000)}k",
                     fontSize = 9.sp,
+                    lineHeight = 10.sp,
                     color = if (isSelected) CalculatorSuccess else CalculatorMutedSoft,
                     fontFamily = TiroBanglaFontFamily
                 )

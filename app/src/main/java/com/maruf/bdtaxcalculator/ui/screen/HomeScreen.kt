@@ -158,7 +158,7 @@ private fun WelcomeSection() {
         Text(
             "স্বাগতম!",
             fontSize = 28.sp,
-            lineHeight = 34.sp,
+            lineHeight = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             color = HomeActionBlue,
             fontFamily = TiroBanglaFontFamily
@@ -276,7 +276,8 @@ private fun HomeServiceCard(
 private fun FilingStatusCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = HomeSoftPurple),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, HomeBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(18.dp)
     ) {
