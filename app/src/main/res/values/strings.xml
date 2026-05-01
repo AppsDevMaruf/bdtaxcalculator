@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">BD Tax Calculator</string>
+    <string name="default_notification_channel_id">taxpro_general_updates</string>
+    <string name="default_notification_channel_name">TaxPro Updates</string>
+    <string name="default_notification_channel_description">Important tax calculator and audit checker updates.</string>
 
     <!-- Screen Titles -->
     <string name="title_tax_calculator">আয়কর ক্যালকুলেটর</string>

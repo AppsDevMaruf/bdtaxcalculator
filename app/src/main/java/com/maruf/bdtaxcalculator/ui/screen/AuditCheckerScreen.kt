@@ -4,15 +4,18 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,8 +49,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,20 +68,20 @@ import com.maruf.bdtaxcalculator.audit.AuditLookupResult
 import com.maruf.bdtaxcalculator.audit.AuditRepository
 import com.maruf.bdtaxcalculator.audit.maskTin
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
-import com.maruf.bdtaxcalculator.ui.theme.AuditDanger
-import com.maruf.bdtaxcalculator.ui.theme.AuditDisabledButton
-import com.maruf.bdtaxcalculator.ui.theme.AuditDisabledText
-import com.maruf.bdtaxcalculator.ui.theme.AuditInputBackground
-import com.maruf.bdtaxcalculator.ui.theme.AuditReadyPill
-import com.maruf.bdtaxcalculator.ui.theme.AuditReadyText
-import com.maruf.bdtaxcalculator.ui.theme.AuditScreenBackground
-import com.maruf.bdtaxcalculator.ui.theme.AuditSelectedPill
-import com.maruf.bdtaxcalculator.ui.theme.AuditSelectedText
-import com.maruf.bdtaxcalculator.ui.theme.AuditZonePill
-import com.maruf.bdtaxcalculator.ui.theme.AuditZoneText
-import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
-import com.maruf.bdtaxcalculator.ui.theme.HomeTextMuted
-import com.maruf.bdtaxcalculator.ui.theme.HomeTextPrimary
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorDanger
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientBottom
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientMiddle
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientTop
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfo
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoBackground
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorInk
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -82,102 +90,157 @@ import kotlinx.coroutines.withContext
 fun AuditCheckerScreen(onBack: (() -> Unit)? = null) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val hideKeyboardOnScrollConnection = rememberKeyboardDismissOnScrollConnection()
+
     var tinInput by rememberSaveable { mutableStateOf("") }
-    var auditDataset by remember { mutableStateOf<AuditDataset?>(null) }
+    var dataset by remember { mutableStateOf<AuditDataset?>(null) }
     var lookupResult by remember { mutableStateOf<AuditLookupResult?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        auditDataset = withContext(Dispatchers.IO) {
+        dataset = withContext(Dispatchers.IO) {
             AuditRepository.load(context)
         }
     }
 
-    val dataset = auditDataset
-    val canSearch = tinInput.length == 12 && dataset != null
-
     Scaffold(
         topBar = {
-            AuditTopBar(onBack = onBack ?: {})
-
+            AuditTopBar(
+                onBack = onBack,
+                onReset = {
+                    tinInput = ""
+                    lookupResult = null
+                    hasSearched = false
+                }
+            )
         },
-        //modifier = Modifier.safeDrawingPadding(),
-        containerColor = AuditScreenBackground,
+        containerColor = CalculatorBackground,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .background(AuditScreenBackground)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(paddingValues)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(CalculatorGradientTop, CalculatorGradientMiddle, CalculatorGradientBottom)
+                    )
+                )
+                .imePadding()
+                .navigationBarsPadding()
         ) {
-            AuditSearchCard(
-                tinInput = tinInput,
-                dataset = dataset,
-                canSearch = canSearch,
-                onTinChange = { value ->
-                    tinInput = value.filter(Char::isDigit).take(12)
-                    lookupResult = null
-                    hasSearched = false
-                },
-                onSearch = {
-                    lookupResult = dataset?.lookupTin(tinInput)
-                    hasSearched = true
-                    keyboardController?.hide()
-                }
-            )
-
-            if (hasSearched) {
-                AuditLookupResultCard(result = lookupResult, searchedTin = tinInput)
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                AuditSearchCard(
+                    tinInput = tinInput,
+                    dataset = dataset,
+                    canSearch = tinInput.length == TinInputLength && dataset != null,
+                    onTinChange = { value ->
+                        tinInput = normalizeAuditTinInput(value)
+                        lookupResult = null
+                        hasSearched = false
+                    },
+                    onSearch = {
+                        lookupResult = dataset?.lookupTin(tinInput)
+                        hasSearched = true
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    }
+                )
             }
 
-            AuditDatasetSummary(dataset = dataset)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .nestedScroll(hideKeyboardOnScrollConnection)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (hasSearched) {
+                    AuditLookupResultCard(result = lookupResult, searchedTin = tinInput)
+                }
 
-            Text(
-                "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 11.sp,
-                color = HomeTextMuted,
-                fontFamily = TiroBanglaFontFamily
-            )
+                AuditDatasetSummary(dataset = dataset)
+
+                Text(
+                    "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AuditTopBar(onBack: () -> Unit) {
+private fun AuditTopBar(
+    onBack: (() -> Unit)?,
+    onReset: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()+8.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
-            Row(
-                modifier = Modifier
-                    .clickable(onClick = onBack)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "ফিরুন",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (onBack != null) {
+                HeaderIconButton(
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    label = "ফিরুন",
+                    onClick = onBack
+                )
+            }
+            Column {
+                Text(
+                    "অডিট চেক",
+                    fontSize = 16.sp,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalculatorInk,
+                    fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    "ফিরুন",
-                    fontSize = 12.sp,
-                    color = HomeTextPrimary,
-                    fontWeight = FontWeight.SemiBold,
+                    "লোকাল JSON ডেটা",
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    color = CalculatorMuted,
                     fontFamily = TiroBanglaFontFamily
                 )
             }
+        }
+
+        HeaderIconButton(
+            icon = Icons.Default.Refresh,
+            label = "রিসেট",
+            onClick = onReset
+        )
+    }
+}
+
+@Composable
+private fun HeaderIconButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Box(
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = label, tint = CalculatorSuccess, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -194,7 +257,7 @@ private fun AuditSearchCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, HomeBorder),
+        border = BorderStroke(1.dp, CalculatorBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -204,14 +267,14 @@ private fun AuditSearchCard(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     "TIN Audit Search",
-                    color = HomeTextPrimary,
+                    color = CalculatorInk,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
                     "১২ সংখ্যার TIN লিখুন। সার্চ সম্পূর্ণ অফলাইন এবং ডেটা অ্যাপের বাইরে কোথাও যায় না।",
-                    color = HomeTextMuted,
+                    color = CalculatorMuted,
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
                     fontFamily = TiroBanglaFontFamily
@@ -231,33 +294,34 @@ private fun AuditSearchCard(
             ) {
                 Text(
                     "${tinInput.length}/12 digits",
-                    color = HomeTextMuted,
+                    color = CalculatorMuted,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = TiroBanglaFontFamily
                 )
                 AuditStatusPill(
                     text = dataset?.let { "Ready · ${formatBengaliNumber(it.totalRecords.toLong())} records" } ?: "লোড হচ্ছে...",
-                    background = AuditReadyPill,
-                    color = AuditReadyText
+                    background = CalculatorSuccess.copy(alpha = 0.1f),
+                    color = CalculatorSuccess
                 )
             }
 
             Button(
                 onClick = onSearch,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
                 enabled = canSearch,
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = CalculatorSuccess,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = AuditDisabledButton,
-                    disabledContentColor = AuditDisabledText
+                    disabledContainerColor = CalculatorMutedSoft,
+                    disabledContentColor = CalculatorMuted
                 )
             ) {
                 Text(
                     "Check Audit Status",
-                    modifier = Modifier.padding(vertical = 7.dp),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = TiroBanglaFontFamily
@@ -273,11 +337,14 @@ private fun AuditTinInput(
     onValueChange: (String) -> Unit,
     onSearch: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = AuditInputBackground,
-        border = BorderStroke(1.dp, HomeBorder)
+        color = CalculatorSurfaceAlt,
+        border = BorderStroke(1.dp, CalculatorBorder)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
@@ -287,27 +354,29 @@ private fun AuditTinInput(
             Icon(
                 Icons.Default.Search,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = CalculatorSuccess,
                 modifier = Modifier.size(19.dp)
             )
             BasicTextField(
                 value = value,
-                onValueChange = onValueChange,
+                onValueChange = { onValueChange(normalizeAuditTinInput(it)) },
                 modifier = Modifier.weight(1f),
                 textStyle = TextStyle(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = HomeTextPrimary,
+                    color = CalculatorInk,
                     fontFamily = TiroBanglaFontFamily
                 ),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
+                    keyboardType = KeyboardType.NumberPassword,
                     imeAction = ImeAction.Search
                 ),
                 keyboardActions = KeyboardActions(
                     onSearch = {
-                        if (value.length == 12) {
+                        if (value.length == TinInputLength) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
                             onSearch()
                         }
                     }
@@ -316,7 +385,7 @@ private fun AuditTinInput(
                     if (value.isEmpty()) {
                         Text(
                             "১২-সংখ্যার TIN লিখুন",
-                            color = HomeTextMuted.copy(alpha = 0.72f),
+                            color = CalculatorMuted.copy(alpha = 0.72f),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             fontFamily = TiroBanglaFontFamily
@@ -334,7 +403,7 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             "ডেটাসেট সামারাইজেশন",
-            color = HomeTextPrimary,
+            color = CalculatorInk,
             fontSize = 16.sp,
             fontWeight = FontWeight.ExtraBold,
             fontFamily = TiroBanglaFontFamily
@@ -345,15 +414,15 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
                 modifier = Modifier.weight(1f),
                 label = "মোট TIN",
                 value = dataset?.totalRecords,
-                pillBackground = AuditReadyPill,
-                pillColor = AuditReadyText
+                pillBackground = CalculatorSuccess.copy(alpha = 0.1f),
+                pillColor = CalculatorSuccess
             )
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
                 label = "নির্বাচিত",
                 value = dataset?.selectedCount,
-                pillBackground = AuditSelectedPill,
-                pillColor = AuditSelectedText
+                pillBackground = CalculatorDangerSoft,
+                pillColor = CalculatorDanger
             )
         }
 
@@ -362,15 +431,15 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
                 modifier = Modifier.weight(1f),
                 label = "নির্বাচিত নয়",
                 value = dataset?.notSelectedCount,
-                pillBackground = AuditReadyPill,
-                pillColor = AuditReadyText
+                pillBackground = CalculatorSuccess.copy(alpha = 0.1f),
+                pillColor = CalculatorSuccess
             )
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
                 label = "ট্যাক্স জোন",
                 value = dataset?.zoneCount,
-                pillBackground = AuditZonePill,
-                pillColor = AuditZoneText
+                pillBackground = CalculatorInfoBackground,
+                pillColor = CalculatorInfo
             )
         }
     }
@@ -404,7 +473,7 @@ private fun AuditSummaryCard(
             )
             Text(
                 value?.let { formatBengaliNumber(it.toLong()) } ?: "—",
-                color = HomeTextPrimary,
+                color = CalculatorInk,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = TiroBanglaFontFamily
@@ -438,9 +507,9 @@ private fun AuditStatusPill(
 private fun AuditLookupResultCard(result: AuditLookupResult?, searchedTin: String) {
     val isAudit = result?.isSelected == true
     val statusColor = when {
-        result == null -> HomeTextMuted
-        isAudit -> AuditDanger
-        else -> MaterialTheme.colorScheme.primary
+        result == null -> CalculatorMuted
+        isAudit -> CalculatorDanger
+        else -> CalculatorSuccess
     }
     val statusTitle = when {
         result == null -> "রেকর্ড পাওয়া যায়নি"

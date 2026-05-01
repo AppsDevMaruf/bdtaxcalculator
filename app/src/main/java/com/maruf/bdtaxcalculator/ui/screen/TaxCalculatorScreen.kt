@@ -1,27 +1,39 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,12 +43,14 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -55,7 +69,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -75,7 +94,6 @@ import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorAccentSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorControlText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDanger
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDivider
@@ -83,9 +101,6 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorFieldText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientBottom
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientMiddle
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientTop
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorHeroMiddle
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorHeroPill
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorHeroStart
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfo
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoDark
@@ -98,6 +113,7 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
+import com.maruf.utils.noRippleClickable
 
 private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
     save = { list -> list.associate { it.type to it.amount } },
@@ -108,10 +124,24 @@ private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
     }
 )
 
+private fun normalizeNumericInput(input: String, maxLength: Int = MaxMoneyInputLength): String {
+    return buildString {
+        input.forEach { char ->
+            when (char) {
+                in '0'..'9' -> append(char)
+                in '০'..'৯' -> append(('0'.code + char.code - '০'.code).toChar())
+                in '٠'..'٩' -> append(('0'.code + char.code - '٠'.code).toChar())
+            }
+        }
+    }.take(maxLength)
+}
+
 @Composable
 fun TaxCalculatorScreen(
     onBack: (() -> Unit)? = null
 ) {
+    val hideKeyboardOnScrollConnection = rememberKeyboardDismissOnScrollConnection()
+
     var grossSalary by rememberSaveable { mutableStateOf("") }
     var yearlyBonus by rememberSaveable { mutableStateOf("") }
     var selectedType by rememberSaveable { mutableStateOf(TaxDefaults.taxpayerTypes.first().id) }
@@ -132,7 +162,7 @@ fun TaxCalculatorScreen(
     val result = calculateTax(
         income = salaryBreakdown.taxableIncome,
         taxFreeLimit = currentType.taxFreeLimit,
-        investmentRebate = investmentRebate.toDouble()
+        investmentRebate = investmentRebate
     )
     val summary = calculateTaxSummary(
         totalIncome = salaryBreakdown.totalIncome,
@@ -149,96 +179,103 @@ fun TaxCalculatorScreen(
                     selectedType = taxpayerTypes.first().id
                     investments = TaxDefaults.investmentOptions
                 },
-                onInfoClick = { showInfoDialog = true },
-                showActions = true
+                onInfoClick = { showInfoDialog = true }
             )
         },
         containerColor = CalculatorBackground,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues = paddingValues)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(CalculatorGradientTop, CalculatorGradientMiddle, CalculatorGradientBottom)
                     )
                 )
-                .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .imePadding()
+                .navigationBarsPadding()
         ) {
             if (showInfoDialog) {
                 TaxInfoDialog(onDismiss = { showInfoDialog = false })
             }
 
-            //AppHeroCard()
-
-            CalculatorOverviewCard(
-                currentType = currentType,
-                salaryBreakdown = salaryBreakdown,
-                summary = summary,
-                taxResult = result
-            )
-
-            CalculatorInputHub(
-                taxpayerTypes = taxpayerTypes,
-                selectedType = selectedType,
-                onTypeSelect = { selectedType = it },
-                grossSalary = grossSalary,
-                yearlyBonus = yearlyBonus,
-                onGrossSalaryChange = { grossSalary = it },
-                onYearlyBonusChange = { yearlyBonus = it }
-            )
-
-            SalaryBreakdownCard(salaryBreakdown)
-
-            if (salaryBreakdown.totalIncome > 0) {
-                TaxSummaryCard(summary = summary)
-            }
-
-            if (salaryBreakdown.taxableIncome > currentType.taxFreeLimit) {
-                RecommendedInvestmentCard(
-                    taxableIncome = salaryBreakdown.taxableIncome,
-                    currentRebate = investmentRebate.toDouble()
+            // Fixed Header
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                CalculatorOverviewCard(
+                    currentType = currentType,
+                    salaryBreakdown = salaryBreakdown,
+                    taxResult = result,
+                    totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
                 )
             }
 
-            InvestmentInputSection(
-                investments = investments,
-                onInvestmentChange = { type, value ->
-                    investments = investments.map {
-                        if (it.type == type) it.copy(amount = value) else it
+            // Scrollable Content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .nestedScroll(hideKeyboardOnScrollConnection)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CalculatorInputHub(
+                    taxpayerTypes = taxpayerTypes,
+                    selectedType = selectedType,
+                    onTypeSelect = { selectedType = it },
+                    grossSalary = grossSalary,
+                    yearlyBonus = yearlyBonus,
+                    onGrossSalaryChange = { grossSalary = it },
+                    onYearlyBonusChange = { yearlyBonus = it },
+                )
+
+                SalaryBreakdownCard(salaryBreakdown)
+
+                InvestmentInputSection(
+                    investments = investments,
+                    onInvestmentChange = { type, value ->
+                        investments = investments.map {
+                            if (it.type == type) it.copy(amount = value) else it
+                        }
                     }
-                },
-                taxableIncome = salaryBreakdown.taxableIncome
-            )
+                )
 
-            if (salaryBreakdown.taxableIncome <= currentType.taxFreeLimit) {
-                TaxFreeCard(
-                    income = salaryBreakdown.taxableIncome,
-                    limit = currentType.taxFreeLimit
+                if (salaryBreakdown.taxableIncome > currentType.taxFreeLimit) {
+                    InvestmentSummaryCard(
+                        taxableIncome = salaryBreakdown.taxableIncome,
+                        investments = investments,
+                        earnedRebate = investmentRebate
+                    )
+                }
+
+                if (salaryBreakdown.totalIncome > 0) {
+                    TaxSummaryCard(summary = summary)
+                }
+
+                if (salaryBreakdown.taxableIncome <= currentType.taxFreeLimit) {
+                    TaxFreeCard(
+                        limit = currentType.taxFreeLimit
+                    )
+                } else {
+                    TaxResultCard(
+                        result = result,
+                        investmentRebate = investmentRebate
+                    )
+                    TaxBreakdownCard(result = result)
+                }
+
+                TaxSlabsCard()
+
+                Text(
+                    "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
                 )
-            } else {
-                TaxResultCard(
-                    result = result,
-                    taxFreeLimit = currentType.taxFreeLimit,
-                    investmentRebate = investmentRebate.toDouble()
-                )
-                TaxBreakdownCard(result = result)
             }
-
-            TaxSlabsCard()
-
-            Text(
-                "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 12.sp,
-                color = CalculatorMuted,
-                fontFamily = TiroBanglaFontFamily
-            )
         }
     }
 }
@@ -247,114 +284,132 @@ fun TaxCalculatorScreen(
 private fun AppTopBar(
     onBack: (() -> Unit)?,
     onReset: () -> Unit,
-    onInfoClick: () -> Unit,
-    showActions: Boolean
+    onInfoClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .safeDrawingPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (onBack != null) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clickable(onClick = onBack)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (onBack != null) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "ফিরুন",
                         tint = CalculatorSuccess,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier
+                            .clickable(onClick = onBack)
+                            .padding(9.dp)
+                            .size(18.dp)
                     )
-                    Text("ফিরুন", fontSize = 12.sp, color = CalculatorControlText, fontWeight = FontWeight.SemiBold, fontFamily = TiroBanglaFontFamily)
                 }
             }
-        } else {
-            Box(Modifier.size(40.dp))
-        }
 
-        if (showActions) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HeaderActionButton(
-                    icon = Icons.Default.Refresh,
-                    label = "রিসেট",
-                    onClick = onReset
+            Column {
+                Text(
+                    text = "আয়কর ক্যালকুলেটর",
+                    fontSize = 16.sp,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalculatorInk,
+                    fontFamily = TiroBanglaFontFamily
                 )
-                HeaderActionButton(
-                    icon = Icons.Default.Info,
-                    label = "তথ্য",
-                    onClick = onInfoClick
+                Text(
+                    text = "করবর্ষ ${TaxDefaults.taxYearLabel}",
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
                 )
             }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HeaderActionButton(
+                icon = Icons.Default.Refresh,
+                label = "রিসেট",
+                onClick = onReset
+            )
+            HeaderActionButton(
+                icon = Icons.Default.Info,
+                label = "তথ্য",
+                onClick = onInfoClick
+            )
         }
     }
 }
+
+
 
 @Composable
 private fun HeaderActionButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .clickable(onClick = onClick)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(9.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = label, tint = CalculatorSuccess, modifier = Modifier.size(16.dp))
-            Text(label, fontSize = 12.sp, color = CalculatorControlText, fontWeight = FontWeight.SemiBold, fontFamily = TiroBanglaFontFamily)
+            Icon(icon, contentDescription = label, tint = CalculatorSuccess, modifier = Modifier.size(18.dp))
         }
     }
 }
 
 @Composable
-private fun AppHeroCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+private fun AnimatedChevron(
+    expanded: Boolean,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "chevronRotation"
+    )
+
+    Icon(
+        Icons.Default.ChevronRight,
+        contentDescription = if (expanded) "বন্ধ করুন" else "খুলুন",
+        tint = tint,
+        modifier = modifier
+            .size(20.dp)
+            .graphicsLayer(rotationZ = rotation)
+    )
+}
+
+@Composable
+private fun ExpandableContent(
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = expanded,
+        modifier = modifier,
+        enter = fadeIn(animationSpec = tween(140)) + expandVertically(
+            animationSpec = tween(240),
+            expandFrom = Alignment.Top
+        ),
+        exit = fadeOut(animationSpec = tween(90)) + shrinkVertically(
+            animationSpec = tween(200),
+            shrinkTowards = Alignment.Top
+        )
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(CalculatorHeroStart, CalculatorHeroMiddle, MaterialTheme.colorScheme.primary)
-                    ),
-                    RoundedCornerShape(22.dp)
-                )
-                .padding(horizontal = 16.dp, vertical = 13.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "আয়কর ক্যালকুলেটর",
-                    fontSize = 23.sp,
-                    lineHeight = 27.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontFamily = TiroBanglaFontFamily
-                )
-                Text(
-                    "সহজেই আপনার বার্ষিক আয়কর এবং সম্ভাব্য বিনিয়োগ রেয়াত হিসাব করুন।",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                    lineHeight = 16.sp,
-                    fontFamily = TiroBanglaFontFamily
-                )
-            }
-        }
+        content()
     }
 }
 
@@ -362,54 +417,89 @@ private fun AppHeroCard() {
 private fun CalculatorOverviewCard(
     currentType: TaxpayerType,
     salaryBreakdown: SalaryBreakdown,
-    summary: TaxSummary,
-    taxResult: TaxResult
+    taxResult: TaxResult,
+    totalInvestment: Long
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.padding(top = 10.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("বর্তমান সারসংক্ষেপ", fontSize = 12.sp, color = CalculatorMuted, fontFamily = TiroBanglaFontFamily)
-                    Text(currentType.label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontFamily = TiroBanglaFontFamily)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("বর্তমান সারসংক্ষেপ", fontSize = 11.sp, lineHeight = 13.sp, color = CalculatorMuted, fontFamily = TiroBanglaFontFamily)
+                    Text(
+                        currentType.label,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontFamily = TiroBanglaFontFamily,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Surface(
                     color = CalculatorAccentSoft,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(
                         Icons.Default.Calculate,
                         contentDescription = null,
-                        modifier = Modifier.padding(7.dp).size(18.dp),
+                        modifier = Modifier.padding(6.dp).size(16.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                HeroMetricTile(
-                    modifier = Modifier.weight(1f),
-                    label = "করযোগ্য আয়",
-                    value = formatBengaliNumber(salaryBreakdown.taxableIncome),
-                    accentColor = MaterialTheme.colorScheme.onBackground
-                )
-                HeroMetricTile(
-                    modifier = Modifier.weight(1f),
-                    label = "প্রদেয় কর",
-                    value = formatBengaliNumber(taxResult.taxAfterRebate.toLong()),
-                    accentColor = CalculatorDanger
-                )
+                item {
+                    HeroMetricTile(
+                        modifier = Modifier.width(104.dp),
+                        label = "করযোগ্য আয়",
+                        value = formatBengaliNumber(salaryBreakdown.taxableIncome),
+                        accentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                item {
+                    HeroMetricTile(
+                        modifier = Modifier.width(104.dp),
+                        label = "প্রদেয় কর",
+                        value = formatBengaliNumber(taxResult.taxAfterRebate.toLong()),
+                        accentColor = CalculatorDanger
+                    )
+                }
+                item {
+                    HeroMetricTile(
+                        modifier = Modifier.width(104.dp),
+                        label = "বিনিয়োগ",
+                        value = formatBengaliNumber(totalInvestment),
+                        accentColor = CalculatorSuccess
+                    )
+                }
+                item {
+                    HeroMetricTile(
+                        modifier = Modifier.width(104.dp),
+                        label = "রিবেট",
+                        value = formatBengaliNumber(taxResult.investmentRebate.toLong()),
+                        accentColor = CalculatorInfoDark
+                    )
+                }
             }
         }
     }
@@ -425,11 +515,20 @@ private fun HeroMetricTile(
     Surface(
         modifier = modifier,
         color = CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(label, fontSize = 11.sp, color = CalculatorMuted, fontWeight = FontWeight.Medium, fontFamily = TiroBanglaFontFamily)
-            Text(value, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = accentColor, fontFamily = TiroBanglaFontFamily)
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, fontSize = 10.sp, lineHeight = 12.sp, color = CalculatorMuted, fontWeight = FontWeight.Medium, fontFamily = TiroBanglaFontFamily)
+            Text(
+                value,
+                fontSize = 14.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = accentColor,
+                fontFamily = TiroBanglaFontFamily,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -442,18 +541,55 @@ private fun CalculatorInputHub(
     grossSalary: String,
     yearlyBonus: String,
     onGrossSalaryChange: (String) -> Unit,
-    onYearlyBonusChange: (String) -> Unit
+    onYearlyBonusChange: (String) -> Unit,
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        shape = RoundedCornerShape(20.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TaxpayerTypeSection(taxpayerTypes, selectedType, onTypeSelect)
-            HorizontalDivider(color = CalculatorDivider)
-            GrossSalaryInput(grossSalary, yearlyBonus, onGrossSalaryChange, onYearlyBonusChange)
+        // Taxpayer type card — standalone, full bleed LazyRow
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(top = 14.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 14.dp)) {
+                    SectionLabel("করদাতার শ্রেণী", "আপনার করদাতার শ্রেণী নির্বাচন করুন")
+                }
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(taxpayerTypes, key = { it.id }) { type ->
+                        TaxpayerTypeItem(
+                            type = type,
+                            isSelected = type.id == selectedType,
+                            onSelect = { onTypeSelect(type.id) },
+                        )
+                    }
+                }
+            }
+        }
+
+        // Income input card — separate
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                GrossSalaryInput(grossSalary, yearlyBonus, onGrossSalaryChange, onYearlyBonusChange)
+            }
         }
     }
 }
@@ -539,6 +675,9 @@ fun CurrencyInputField(
     placeholder: String,
     leading: @Composable (() -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
         Surface(
@@ -559,7 +698,7 @@ fun CurrencyInputField(
                 }
                 androidx.compose.foundation.text.BasicTextField(
                     value = value,
-                    onValueChange = onValueChange,
+                    onValueChange = { onValueChange(normalizeNumericInput(it)) },
                     modifier = Modifier.weight(1f),
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontSize = 16.sp,
@@ -567,8 +706,16 @@ fun CurrencyInputField(
                         color = MaterialTheme.colorScheme.onBackground,
                         fontFamily = TiroBanglaFontFamily
                     ),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.NumberPassword,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
                     ),
                     decorationBox = { innerTextField ->
                         if (value.isEmpty()) Text(placeholder, color = HomeNavInactive, fontSize = 16.sp, fontFamily = TiroBanglaFontFamily)
@@ -653,13 +800,9 @@ private fun DetailPanel(
                 fontWeight = FontWeight.Medium,
                 fontFamily = TiroBanglaFontFamily
             )
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = if (expanded) "বন্ধ করুন" else "খুলুন",
-                tint = color,
-                modifier = Modifier
-                    .size(18.dp)
-                    .graphicsLayer(rotationZ = if (expanded) 90f else 0f)
+            AnimatedChevron(
+                expanded = expanded,
+                tint = color
             )
         }
         Surface(
@@ -667,8 +810,13 @@ private fun DetailPanel(
             shape = RoundedCornerShape(14.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorDivider)
         ) {
-            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .animateContentSize(animationSpec = tween(durationMillis = 240))
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                ExpandableContent(expanded = expanded) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         content()
                         HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp), color = CalculatorDivider)
@@ -731,8 +879,7 @@ private fun SummaryRow(label: String, value: String, labelColor: Color, valueCol
 @Composable
 private fun InvestmentInputSection(
     investments: List<InvestmentInputData>,
-    onInvestmentChange: (String, String) -> Unit,
-    taxableIncome: Long
+    onInvestmentChange: (String, String) -> Unit
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -742,7 +889,12 @@ private fun InvestmentInputSection(
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier
+                .animateContentSize(animationSpec = tween(durationMillis = 240))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -759,18 +911,14 @@ private fun InvestmentInputSection(
                         fontWeight = FontWeight.Bold,
                         fontFamily = TiroBanglaFontFamily
                     )
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
+                    AnimatedChevron(
+                        expanded = isExpanded,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer(rotationZ = if (isExpanded) 90f else 0f)
                     )
                 }
             }
 
-            AnimatedVisibility(visible = isExpanded) {
+            ExpandableContent(expanded = isExpanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     investments.forEach { investment ->
                         CurrencyInputField(
@@ -787,25 +935,153 @@ private fun InvestmentInputSection(
 }
 
 @Composable
-private fun RecommendedInvestmentCard(taxableIncome: Long, currentRebate: Double) {
-    val maxInvestment = (taxableIncome * 0.20).toLong()
-    val maxRebate = (maxInvestment * 0.15).toLong()
+private fun InvestmentSummaryCard(
+    taxableIncome: Long,
+    investments: List<InvestmentInputData>,
+    earnedRebate: Double
+) {
+    val totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
+    val maxRebateLimit = minOf(
+        taxableIncome * TaxDefaults.incomeBasedInvestmentRebateRate,
+        TaxDefaults.maxInvestmentRebate
+    )
+    
+    // Max investment required to get max rebate: maxRebateLimit / 0.15
+    val maxInvestmentRequired = (maxRebateLimit / TaxDefaults.investmentRebateRate).toLong()
+    val progress = if (maxRebateLimit > 0) (earnedRebate / maxRebateLimit).toFloat().coerceIn(0f, 1f) else 0f
+    val remainingInvestmentNeeded = maxOf(0L, maxInvestmentRequired - totalInvestment)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(20.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                Text("স্মার্ট বিনিয়োগ টিপস", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontFamily = TiroBanglaFontFamily)
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Title Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "বিনিয়োগ ও রিবেট",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalculatorInk,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Icon(
+                    Icons.Default.Verified,
+                    contentDescription = null,
+                    tint = CalculatorInk,
+                    modifier = Modifier.size(24.dp)
+                )
             }
+
+            // Progress Section
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "রিবেট সীমা ব্যবহার",
+                        fontSize = 14.sp,
+                        color = CalculatorMuted,
+                        fontFamily = TiroBanglaFontFamily
+                    )
+                    Text(
+                        "${formatBengaliNumber((progress * 100).toInt().toLong())}%",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CalculatorInk,
+                        fontFamily = TiroBanglaFontFamily
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .graphicsLayer {
+                            shape = RoundedCornerShape(5.dp)
+                            clip = true
+                        },
+                    color = CalculatorSuccess,
+                    trackColor = CalculatorSurfaceAlt,
+                )
+            }
+
+            // Stats Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InvestmentStatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "মোট বিনিয়োগ",
+                    value = formatBengaliNumber(totalInvestment)
+                )
+                InvestmentStatBox(
+                    modifier = Modifier.weight(1f),
+                    label = "অর্জিত রিবেট",
+                    value = formatBengaliNumber(earnedRebate.toLong())
+                )
+            }
+
+            // Tip Section
+            if (remainingInvestmentNeeded > 0) {
+                Text(
+                    "টিপস: আরও ${formatBengaliNumber(remainingInvestmentNeeded)} টাকা বিনিয়োগ করলে রিবেট সর্বোচ্চ সীমায় পৌঁছাবে।",
+                    fontSize = 13.sp,
+                    color = CalculatorMuted,
+                    lineHeight = 20.sp,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            } else {
+                Text(
+                    "অভিনন্দন! আপনি আপনার আয়ের বিপরীতে সর্বোচ্চ রিবেট সীমা অর্জন করেছেন।",
+                    fontSize = 13.sp,
+                    color = CalculatorSuccess,
+                    lineHeight = 20.sp,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InvestmentStatBox(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String
+) {
+    Surface(
+        modifier = modifier,
+        color = CalculatorSurfaceAlt.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Text(
-                "সর্বোচ্চ ${formatBengaliNumber(maxInvestment)} টাকা পর্যন্ত বিনিয়োগ করলে প্রায় ${formatBengaliNumber(maxRebate)} টাকা পর্যন্ত রেয়াত পেতে পারেন। আপনার বর্তমান রেয়াত ${formatBengaliNumber(currentRebate.toLong())} টাকা।",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.primary,
-                lineHeight = 17.sp,
+                label,
+                fontSize = 13.sp,
+                color = CalculatorMuted,
+                fontFamily = TiroBanglaFontFamily
+            )
+            Text(
+                "৳ $value",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = CalculatorInk,
                 fontFamily = TiroBanglaFontFamily
             )
         }
@@ -813,7 +1089,7 @@ private fun RecommendedInvestmentCard(taxableIncome: Long, currentRebate: Double
 }
 
 @Composable
-private fun TaxResultCard(result: TaxResult, taxFreeLimit: Long, investmentRebate: Double) {
+private fun TaxResultCard(result: TaxResult, investmentRebate: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -840,7 +1116,7 @@ private fun TaxResultCard(result: TaxResult, taxFreeLimit: Long, investmentRebat
 
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 ResultRow("মোট কর", formatBengaliNumber(result.totalTax.toLong()))
-                ResultRow("বিনিয়োগ রেয়াত", "- ${formatBengaliNumber(investmentRebate.toLong())}", color = CalculatorPositive)
+                ResultRow("বিনিয়োগ রিবেট", "- ${formatBengaliNumber(investmentRebate.toLong())}", color = CalculatorPositive)
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f))
                 ResultRow("নিট প্রদেয়", formatBengaliNumber(result.taxAfterRebate.toLong()), isBold = true)
             }
@@ -867,7 +1143,12 @@ private fun TaxBreakdownCard(result: TaxResult) {
         shape = RoundedCornerShape(20.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorDivider)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier
+                .animateContentSize(animationSpec = tween(durationMillis = 240))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -876,17 +1157,13 @@ private fun TaxBreakdownCard(result: TaxResult) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SectionLabel("কর ধাপ অনুযায়ী হিসাব", "আপনার আয়ের ওপর ট্যাক্স যেভাবে বসানো হয়েছে")
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
+                AnimatedChevron(
+                    expanded = isExpanded,
                     tint = CalculatorMuted,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer(rotationZ = if (isExpanded) 90f else 0f)
                 )
             }
 
-            AnimatedVisibility(visible = isExpanded) {
+            ExpandableContent(expanded = isExpanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     result.breakdown.forEach { slab ->
                         TaxBreakdownRow(slab)
@@ -919,53 +1196,37 @@ private fun TaxBreakdownRow(slab: TaxBreakdown) {
 }
 
 @Composable
-private fun TaxpayerTypeSection(
-    types: List<TaxpayerType>,
-    selectedId: String,
-    onSelect: (String) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("করদাতার শ্রেণী", "আপনার করদাতার শ্রেণী নির্বাচন করুন")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            types.forEach { type ->
-                TaxpayerTypeItem(
-                    type = type,
-                    isSelected = type.id == selectedId,
-                    onSelect = { onSelect(type.id) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun TaxpayerTypeItem(
     type: TaxpayerType,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
 ) {
     Surface(
         modifier = Modifier
-            .width(108.dp)
-            .height(84.dp)
-            .clickable(onClick = onSelect),
-        color = if (isSelected) CalculatorSuccess.copy(alpha = 0.08f) else CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) CalculatorSuccess else CalculatorBorder
-        )
+            .width(112.dp)
+            .height(88.dp)
+            .noRippleClickable(onClick = onSelect),
+        color = CalculatorSurfaceAlt,
+        shape = RoundedCornerShape(18.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(2.dp)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = if (isSelected) CalculatorSuccess.copy(alpha = 0.08f) else CalculatorSurfaceAlt,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) CalculatorSuccess else CalculatorBorder
+                )
+            ) {}
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(8.dp),
+                    .padding(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -1031,7 +1292,7 @@ private fun TaxpayerTypeItem(
 }
 
 @Composable
-private fun TaxFreeCard(income: Long, limit: Long) {
+private fun TaxFreeCard(limit: Long) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CalculatorInfoBackground),
@@ -1067,7 +1328,12 @@ private fun TaxSlabsCard() {
         shape = RoundedCornerShape(18.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorBorder)
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier
+                .animateContentSize(animationSpec = tween(durationMillis = 240))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1079,17 +1345,13 @@ private fun TaxSlabsCard() {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(18.dp))
                     Text("স্ট্যান্ডার্ড কর ধাপ (${TaxDefaults.taxYearLabel})", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontFamily = TiroBanglaFontFamily)
                 }
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
+                AnimatedChevron(
+                    expanded = isExpanded,
                     tint = CalculatorMuted,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer(rotationZ = if (isExpanded) 90f else 0f)
                 )
             }
 
-            AnimatedVisibility(visible = isExpanded) {
+            ExpandableContent(expanded = isExpanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TaxDefaults.taxSlabs.forEach { (label, rate) ->
                         SlabInfoRow(label, rate)

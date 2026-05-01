@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "852377356713",
+    "project_id": "bd-tax-calculator-4415f",
+    "storage_bucket": "bd-tax-calculator-4415f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:852377356713:android:b2969a7909ff6c22765cb8",
+        "android_client_info": {
+          "package_name": "com.maruf.bdtaxcalculator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBw3U6pRquUN1DF1baM94-x5q4QY-3IgN0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

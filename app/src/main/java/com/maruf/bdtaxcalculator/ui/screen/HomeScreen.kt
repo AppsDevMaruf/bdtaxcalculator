@@ -27,8 +27,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PersonOutline
+import androidx.compose.material.icons.filled.SavedSearch
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,7 +54,6 @@ import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftNav
-import com.maruf.bdtaxcalculator.ui.theme.HomeSoftPurple
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextMuted
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextPrimary
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
@@ -97,7 +96,7 @@ fun HomeScreen(
             )
 
             HomeServiceCard(
-                icon = Icons.Default.Shield,
+                icon = Icons.Default.SavedSearch,
                 iconBg = MaterialTheme.colorScheme.primary,
                 title = "অডিট চেক",
                 description = "আপনার TIN অডিটে আছে কি না তা সম্পূর্ণ অফলাইনে দ্রুত যাচাই করুন।",
