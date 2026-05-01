@@ -165,15 +165,6 @@ fun AuditCheckerScreen(onBack: (() -> Unit)? = null) {
                 }
 
                 AuditDatasetSummary(dataset = dataset)
-
-                Text(
-                    "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
-                    color = CalculatorMuted,
-                    fontFamily = TiroBanglaFontFamily
-                )
             }
         }
     }
@@ -357,7 +348,7 @@ private fun AuditTinInput(
                 modifier = Modifier.weight(1f),
                 textStyle = TextStyle(
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Medium,
                     color = CalculatorInk,
                 ),
                 singleLine = true,
@@ -483,7 +474,7 @@ private fun AuditStatusPill(
 ) {
     Surface(
         color = background,
-        shape = RoundedCornerShape(999.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Text(
             text,

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -52,6 +54,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,6 +68,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -80,6 +84,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.maruf.bdtaxcalculator.tax.InvestmentInputData
 import com.maruf.bdtaxcalculator.tax.LocalTaxPreferenceStore
 import com.maruf.bdtaxcalculator.tax.SalaryBreakdown
@@ -267,17 +272,6 @@ fun TaxCalculatorScreen(
                 } else {
                     TaxBreakdownCard(result = result)
                 }
-
-                TaxSlabsCard()
-
-                Text(
-                    "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
-                    color = CalculatorMuted,
-                    fontFamily = TiroBanglaFontFamily
-                )
             }
         }
     }
@@ -641,40 +635,63 @@ private fun SectionLabel(title: String, subtitle: String) {
 
 @Composable
 private fun TaxInfoDialog(onDismiss: () -> Unit) {
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+   Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .heightIn(max = 620.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    "কর নিয়ম ও তথ্য",
+                    "এই অ্যাপে যেভাবে হিসাব হয়",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                     fontFamily = TiroBanglaFontFamily
                 )
-                Text(
-                    "এই ক্যালকুলেটরটি ${TaxDefaults.taxYearLabel} করবর্ষের বেতনভুক্ত ব্যক্তির নিয়ম অনুযায়ী মোট বেতন আয়ের ১/৩ অংশ অথবা ৫,০০,০০০ টাকা, যেটি কম, তা ছাড় ধরে হিসাব করে। বিনিয়োগ রিবেট হিসেবে করযোগ্য আয়ের ৩%, প্রকৃত বিনিয়োগের ১৫%, অথবা ১০ লাখ টাকার মধ্যে যেটি কম সেটি ধরা হয়।",
-                    fontSize = 14.sp,
-                    color = CalculatorFieldText,
-                    lineHeight = 22.sp,
-                    fontFamily = TiroBanglaFontFamily
-                )
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CalculatorSuccess)
-                ) {
-                    Text("ঠিক আছে", modifier = Modifier.padding(vertical = 4.dp), fontFamily = TiroBanglaFontFamily)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BulletInfoRow("মাসিক মোট বেতন × ১২ + বার্ষিক বোনাস = মোট বার্ষিক আয়।")
+                    BulletInfoRow("বেতন আয়ের ছাড় হিসেবে মোট আয়ের ১/৩ অংশ অথবা ${formatBengaliNumber(TaxDefaults.maxTotalExemption)} টাকা, যেটি কম, বাদ দেওয়া হয়।")
+                    BulletInfoRow("মোট বার্ষিক আয় - বেতন ছাড় = নিট করযোগ্য আয়।")
+                    BulletInfoRow("নির্বাচিত করদাতা শ্রেণির করমুক্ত সীমা পর্যন্ত কর শূন্য ধরা হয়।")
+                    BulletInfoRow("করবর্ষ ${TaxDefaults.taxYearLabel} অনুযায়ী কর ধাপ: পরবর্তী ৩,০০,০০০ টাকায় ১০%, পরবর্তী ৪,০০,০০০ টাকায় ১৫%, পরবর্তী ৫,০০,০০০ টাকায় ২০%, পরবর্তী ২০,০০,০০০ টাকায় ২৫%, এরপর ৩০%।")
+                    BulletInfoRow("বিনিয়োগ রিবেট হিসেবে করযোগ্য আয়ের ৩%, প্রকৃত বিনিয়োগের ১৫%, অথবা ১০ লাখ টাকার মধ্যে কমটি ধরা হয়।")
+                    BulletInfoRow("চূড়ান্ত প্রদেয় কর = ধাপ অনুযায়ী মোট কর - বিনিয়োগ রিবেট। তবে ন্যূনতম কর সাধারণ অ্যাসেসমেন্টে ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())} টাকা এবং নতুন অ্যাসেসমেন্টে ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())} টাকা।")
+                    BulletInfoRow("সব হিসাব ডিভাইসেই হয়; আপনার ইনপুট কোনো সার্ভার বা ডেটাবেসে পাঠানো বা সংরক্ষণ করা হয় না।")
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BulletInfoRow(text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            "•",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = CalculatorSuccess,
+            fontFamily = TiroBanglaFontFamily
+        )
+        Text(
+            text,
+            modifier = Modifier.weight(1f),
+            fontSize = 13.sp,
+            color = CalculatorFieldText,
+            lineHeight = 20.sp,
+            fontFamily = TiroBanglaFontFamily
+        )
     }
 }
 
@@ -691,7 +708,7 @@ private fun GrossSalaryInput(
         CurrencyInputField(
             value = grossSalary,
             onValueChange = onGrossSalaryChange,
-            label = "মাসিক গ্রস বেতন",
+            label = "মাসিক মোট বেতন",
             placeholder = "0"
         )
 
@@ -716,7 +733,7 @@ fun CurrencyInputField(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
+        Text(label, fontSize = 12.sp, lineHeight = 2.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
@@ -733,7 +750,7 @@ fun CurrencyInputField(
                 } else {
                     Text("৳", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = TiroBanglaFontFamily)
                 }
-                androidx.compose.foundation.text.BasicTextField(
+                BasicTextField(
                     value = value,
                     onValueChange = { onValueChange(normalizeNumericInput(it)) },
                     modifier = Modifier.weight(1f),
@@ -830,7 +847,7 @@ private fun DetailPanel(
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = TiroBanglaFontFamily)
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                if (expanded) "কম দেখুন" else "বিস্তারিত",
+                if (expanded) "বন্ধ করুন" else "বিস্তারিত",
                 fontSize = 11.sp,
                 color = CalculatorMuted,
                 fontWeight = FontWeight.Medium,
@@ -917,7 +934,7 @@ private fun InvestmentInputSection(
                 SectionLabel("বিনিয়োগ রেয়াত", "আপনার বিনিয়োগ তথ্য দিন")
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        if (isExpanded) "কম দেখুন" else "বিনিয়োগ যোগ করুন",
+                        if (isExpanded) "বন্ধ করুন" else "বিনিয়োগ যোগ করুন",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -936,7 +953,7 @@ private fun InvestmentInputSection(
                         CurrencyInputField(
                             value = investment.amount,
                             onValueChange = { onInvestmentChange(investment.type, it) },
-                            label = investment.type,
+                            label = investment.title,
                             placeholder = "0"
                         )
                     }
@@ -981,7 +998,7 @@ private fun InvestmentSummaryCard(
             ) {
                 Text(
                     "বিনিয়োগ ও রিবেট",
-                    fontSize = 24.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = CalculatorInk,
                     fontFamily = TiroBanglaFontFamily
@@ -989,7 +1006,7 @@ private fun InvestmentSummaryCard(
                 Icon(
                     Icons.Default.Verified,
                     contentDescription = null,
-                    tint = CalculatorInk,
+                    tint = CalculatorSuccess,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -1003,7 +1020,8 @@ private fun InvestmentSummaryCard(
                 ) {
                     Text(
                         "রিবেট সীমা ব্যবহার",
-                        fontSize = 14.sp,
+                        fontSize = 11.sp,
+                        lineHeight = 10.sp,
                         color = CalculatorMuted,
                         fontFamily = TiroBanglaFontFamily
                     )
@@ -1016,16 +1034,18 @@ private fun InvestmentSummaryCard(
                     )
                 }
                 LinearProgressIndicator(
-                    progress = { progress },
+                                progress = { progress },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .graphicsLayer {
-                            shape = RoundedCornerShape(5.dp)
-                            clip = true
-                        },
-                    color = CalculatorSuccess,
-                    trackColor = CalculatorSurfaceAlt,
+                                        .fillMaxWidth()
+                                        .height(10.dp)
+                                        .background(
+                                            color = CalculatorSurfaceAlt,
+                                            shape = RoundedCornerShape(50)
+                                        )
+                                        .clip(RoundedCornerShape(50)),
+                color = CalculatorSuccess,
+                trackColor = Color.Transparent,
+                strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                 )
             }
 
@@ -1050,15 +1070,15 @@ private fun InvestmentSummaryCard(
             if (remainingInvestmentNeeded > 0) {
                 Text(
                     "টিপস: আরও ${formatBengaliNumber(remainingInvestmentNeeded)} টাকা বিনিয়োগ করলে রিবেট সর্বোচ্চ সীমায় পৌঁছাবে।",
-                    fontSize = 13.sp,
-                    color = CalculatorMuted,
-                    lineHeight = 20.sp,
+                    fontSize = 12.sp,
+                    color = CalculatorInfo,
+                    lineHeight = 16.sp,
                     fontFamily = TiroBanglaFontFamily
                 )
             } else {
                 Text(
                     "অভিনন্দন! আপনি আপনার আয়ের বিপরীতে সর্বোচ্চ রিবেট সীমা অর্জন করেছেন।",
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = CalculatorSuccess,
                     lineHeight = 20.sp,
                     fontFamily = TiroBanglaFontFamily
@@ -1282,57 +1302,5 @@ private fun TaxFreeCard(limit: Long) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun TaxSlabsCard() {
-    var isExpanded by rememberSaveable { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CalculatorSurfaceAlt),
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorBorder)
-    ) {
-        Column(
-            modifier = Modifier
-                .animateContentSize(animationSpec = tween(durationMillis = 240))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(18.dp))
-                    Text("স্ট্যান্ডার্ড কর ধাপ (${TaxDefaults.taxYearLabel})", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontFamily = TiroBanglaFontFamily)
-                }
-                AnimatedChevron(
-                    expanded = isExpanded,
-                    tint = CalculatorMuted,
-                )
-            }
-
-            ExpandableContent(expanded = isExpanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TaxDefaults.taxSlabs.forEach { (label, rate) ->
-                        SlabInfoRow(label, rate)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SlabInfoRow(label: String, rate: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 12.sp, color = CalculatorMuted, fontFamily = TiroBanglaFontFamily)
-        Text(rate, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, fontFamily = TiroBanglaFontFamily)
     }
 }
