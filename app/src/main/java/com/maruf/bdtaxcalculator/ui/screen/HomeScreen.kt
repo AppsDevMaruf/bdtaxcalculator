@@ -26,9 +26,8 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.PersonOutline
-import androidx.compose.material.icons.filled.SavedSearch
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -96,7 +95,7 @@ fun HomeScreen(
             )
 
             HomeServiceCard(
-                icon = Icons.Default.SavedSearch,
+                icon = Icons.Default.Security,
                 iconBg = MaterialTheme.colorScheme.primary,
                 title = "অডিট চেক",
                 description = "আপনার TIN অডিটে আছে কি না তা সম্পূর্ণ অফলাইনে দ্রুত যাচাই করুন।",
@@ -107,7 +106,7 @@ fun HomeScreen(
                 onClick = onOpenAuditChecker
             )
 
-            FilingStatusCard()
+            //FilingStatusCard()
         }
     }
 }
@@ -122,26 +121,14 @@ private fun HomeTopBar() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Surface(
-                color = HomeSoftBlue,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(
-                    Icons.Default.AccountCircle,
-                    contentDescription = "প্রোফাইল",
-                    tint = HomeTextPrimary,
-                    modifier = Modifier.padding(8.dp).size(28.dp)
-                )
-            }
             Text(
-                "ট্যাক্সপ্রো",
+                "Tax Calculator Bd",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = HomeActionBlueDark,
                 fontFamily = TiroBanglaFontFamily
             )
         }
-
         Icon(
             Icons.Default.NotificationsNone,
             contentDescription = "নোটিফিকেশন",
@@ -389,8 +376,8 @@ fun HomeBottomNavigation(
                 onClick = onOpenAuditChecker
             )
             BottomNavItem(
-                icon = Icons.Default.PersonOutline,
-                label = "প্রোফাইল",
+                icon = Icons.Default.Settings,
+                label = "সেটিংস",
                 isSelected = selectedDestination == AppDestination.Profile,
                 onClick = onOpenProfile
             )

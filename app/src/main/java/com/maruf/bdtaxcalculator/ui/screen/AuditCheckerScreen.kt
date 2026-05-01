@@ -72,6 +72,7 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDanger
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft2
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientBottom
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientMiddle
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientTop
@@ -82,6 +83,8 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
+import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
+import com.maruf.bdtaxcalculator.ui.theme.HomeTextMuted
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -201,23 +204,14 @@ private fun AuditTopBar(
                     onClick = onBack
                 )
             }
-            Column {
-                Text(
-                    "অডিট চেক",
-                    fontSize = 16.sp,
-                    lineHeight = 19.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = CalculatorInk,
-                    fontFamily = TiroBanglaFontFamily
-                )
-                Text(
-                    "লোকাল JSON ডেটা",
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
-                    color = CalculatorMuted,
-                    fontFamily = TiroBanglaFontFamily
-                )
-            }
+            Text(
+                "অডিট চেক",
+                fontSize = 16.sp,
+                lineHeight = 19.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = CalculatorInk,
+                fontFamily = TiroBanglaFontFamily
+            )
         }
 
         HeaderIconButton(
@@ -312,12 +306,12 @@ private fun AuditSearchCard(
                     .fillMaxWidth()
                     .height(52.dp),
                 enabled = canSearch,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = CalculatorSuccess,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = CalculatorMutedSoft,
-                    disabledContentColor = CalculatorMuted
+                    disabledContainerColor = HomeSoftGreen,
+                    disabledContentColor = HomeTextMuted
                 )
             ) {
                 Text(
@@ -342,7 +336,7 @@ private fun AuditTinInput(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = CalculatorSurfaceAlt,
         border = BorderStroke(1.dp, CalculatorBorder)
     ) {
@@ -365,11 +359,10 @@ private fun AuditTinInput(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = CalculatorInk,
-                    fontFamily = TiroBanglaFontFamily
                 ),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.NumberPassword,
+                    keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Search
                 ),
                 keyboardActions = KeyboardActions(
@@ -386,8 +379,8 @@ private fun AuditTinInput(
                         Text(
                             "১২-সংখ্যার TIN লিখুন",
                             color = CalculatorMuted.copy(alpha = 0.72f),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
                             fontFamily = TiroBanglaFontFamily
                         )
                     }
@@ -421,7 +414,7 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
                 modifier = Modifier.weight(1f),
                 label = "নির্বাচিত",
                 value = dataset?.selectedCount,
-                pillBackground = CalculatorDangerSoft,
+                pillBackground = CalculatorDangerSoft2,
                 pillColor = CalculatorDanger
             )
         }

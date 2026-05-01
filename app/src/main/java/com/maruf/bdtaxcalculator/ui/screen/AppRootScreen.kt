@@ -41,7 +41,7 @@ fun AppRootScreen() {
         val screenName = when (currentRoute) {
             Screen.TaxCalculator.route -> "tax_calculator"
             Screen.AuditChecker.route -> "audit_checker"
-            Screen.Profile.route -> "profile"
+            Screen.Profile.route -> "settings"
             else -> "home"
         }
         FirebaseTracker.logScreen(screenName)

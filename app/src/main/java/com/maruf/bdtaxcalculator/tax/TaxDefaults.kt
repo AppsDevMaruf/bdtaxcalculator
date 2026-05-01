@@ -9,21 +9,19 @@ import androidx.compose.material.icons.filled.Woman
 
 object TaxDefaults {
     const val taxYearLabel = "২০২৫-২৬"
-    const val maxHouseRentExemption = 300_000L
-    const val maxMedicalExemption = 120_000L
-    const val maxConveyanceExemption = 30_000L
     const val maxTotalExemption = 500_000L
     const val minimumTax = 5_000.0
+    const val newAssessmentMinimumTax = 1_000.0
     const val maxInvestmentRebate = 1_000_000.0
     const val incomeBasedInvestmentRebateRate = 0.03
     const val investmentRebateRate = 0.15
 
     val taxpayerTypes = listOf(
         TaxpayerType("general", "সাধারণ করদাতা", 375_000L, Icons.Default.Person),
-        TaxpayerType("women", "মহিলা করদাতা", 400_000L, Icons.Default.Woman),
-        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 400_000L, Icons.Default.Elderly),
-        TaxpayerType("disabled", "প্রতিবন্ধী ব্যক্তি", 475_000L, Icons.AutoMirrored.Filled.Accessible),
-        TaxpayerType("freedomFighter", "মুক্তিযোদ্ধা", 500_000L, Icons.Default.MilitaryTech)
+        TaxpayerType("women", "মহিলা করদাতা", 425_000L, Icons.Default.Woman),
+        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 425_000L, Icons.Default.Elderly),
+        TaxpayerType("disabled", "তৃতীয় লিঙ্গ / প্রতিবন্ধী", 500_000L, Icons.AutoMirrored.Filled.Accessible),
+        TaxpayerType("freedomFighter", "মুক্তিযোদ্ধা / জুলাই যোদ্ধা", 525_000L, Icons.Default.MilitaryTech)
     )
 
     val investmentOptions = listOf(
@@ -35,7 +33,7 @@ object TaxDefaults {
     )
 
     val taxSlabs = listOf(
-        "প্রথম ৩,৭৫,০০০ টাকা পর্যন্ত" to "শূন্য",
+        "প্রথম করমুক্ত সীমা পর্যন্ত" to "শূন্য",
         "পরবর্তী ৩,০০,০০০ টাকা" to "১০%",
         "পরবর্তী ৪,০০,০০০ টাকা" to "১৫%",
         "পরবর্তী ৫,০০,০০০ টাকা" to "২০%",

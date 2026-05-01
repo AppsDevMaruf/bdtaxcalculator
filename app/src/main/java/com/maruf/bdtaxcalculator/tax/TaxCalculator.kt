@@ -3,31 +3,16 @@ package com.maruf.bdtaxcalculator.tax
 import kotlin.math.roundToLong
 
 fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakdown {
-    val basicSalary = (grossSalary * 0.50).toLong()
-    val houseRent = (basicSalary * 0.50).toLong()
-    val medical = (basicSalary * 0.10).toLong()
-    val conveyance = (grossSalary * 0.05).toLong()
+    val conveyance = (grossSalary * 0.05).roundToLong()
+    val basicSalary = ((grossSalary - conveyance) / 1.6).roundToLong()
+    val houseRent = (basicSalary * 0.50).roundToLong()
+    val medical = (basicSalary * 0.10).roundToLong()
     val otherAllowances = grossSalary - (basicSalary + houseRent + medical + conveyance)
 
     val totalIncome = (grossSalary * 12) + yearlyBonus
-    val yearlyHouseRent = houseRent * 12
-    val yearlyMedical = medical * 12
-    val yearlyConveyance = conveyance * 12
-
-    val totalIndividualExemption = minOf(
-        yearlyHouseRent,
-        TaxDefaults.maxHouseRentExemption
-    ) + minOf(
-        yearlyMedical,
-        TaxDefaults.maxMedicalExemption
-    ) + minOf(
-        yearlyConveyance,
-        TaxDefaults.maxConveyanceExemption
-    )
-
     val totalExemption = minOf(
-        totalIndividualExemption,
-        minOf(totalIncome / 3, TaxDefaults.maxTotalExemption)
+        totalIncome / 3,
+        TaxDefaults.maxTotalExemption
     )
 
     return SalaryBreakdown(
@@ -54,7 +39,8 @@ fun calculateInvestmentRebate(investments: List<InvestmentInputData>, taxableInc
 fun calculateTax(
     income: Long,
     taxFreeLimit: Long,
-    investmentRebate: Double = 0.0
+    investmentRebate: Double = 0.0,
+    minimumTax: Double = TaxDefaults.minimumTax
 ): TaxResult {
     if (income <= taxFreeLimit) {
         return TaxResult(
@@ -98,23 +84,17 @@ fun calculateTax(
         currentStart += taxableInSlab
     }
 
-    val taxBeforeRebate = if (rawTax in 0.0..<TaxDefaults.minimumTax) {
-        TaxDefaults.minimumTax
-    } else {
-        rawTax
-    }
-
-    val taxAfterRebate = if (taxBeforeRebate == TaxDefaults.minimumTax) {
-        TaxDefaults.minimumTax
-    } else {
-        maxOf(taxBeforeRebate - investmentRebate, 0.0)
+    val taxAfterRebate = when {
+        rawTax <= 0.0 -> 0.0
+        rawTax - investmentRebate > minimumTax -> rawTax - investmentRebate
+        else -> minimumTax
     }
 
     return TaxResult(
-        totalTax = taxAfterRebate,
+        totalTax = rawTax,
         breakdown = breakdown,
         taxableAmount = income - taxFreeLimit,
-        isMinimumTax = taxBeforeRebate == TaxDefaults.minimumTax,
+        isMinimumTax = taxAfterRebate == minimumTax,
         investmentRebate = investmentRebate,
         taxAfterRebate = taxAfterRebate
     )
