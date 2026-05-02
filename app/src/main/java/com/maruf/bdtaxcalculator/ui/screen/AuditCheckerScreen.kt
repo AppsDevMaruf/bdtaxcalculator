@@ -258,7 +258,7 @@ private fun AuditSearchCard(
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    "১২ সংখ্যার TIN লিখুন। সার্চ সম্পূর্ণ অফলাইন এবং ডেটা অ্যাপের বাইরে কোথাও যায় না।",
+                    "১২ সংখ্যার TIN লিখুন। সার্চ সম্পূর্ণ অফলাইন এবং ডেটা অ্যাপের বাইরে কোথাও যায় না। Assessment year 23-24",
                     color = CalculatorMuted,
                     fontSize = 12.sp,
                     lineHeight = 18.sp,

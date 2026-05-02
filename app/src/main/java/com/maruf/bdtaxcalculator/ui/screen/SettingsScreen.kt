@@ -305,7 +305,7 @@ private fun PrivacyHeroCard() {
 @Composable
 private fun PrivacyPill(label: String) {
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(12.dp),
         color = HomeSoftGreen,
         border = BorderStroke(1.dp, CalculatorBorder)
     ) {
