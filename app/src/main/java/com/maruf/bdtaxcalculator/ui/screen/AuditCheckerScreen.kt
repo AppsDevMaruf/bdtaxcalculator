@@ -90,7 +90,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun AuditCheckerScreen(onBack: (() -> Unit)? = null) {
+fun AuditCheckerScreen(
+    onBack: (() -> Unit)? = null,
+    onRequestInAppReview: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -148,6 +151,7 @@ fun AuditCheckerScreen(onBack: (() -> Unit)? = null) {
                         hasSearched = true
                         focusManager.clearFocus()
                         keyboardController?.hide()
+                        onRequestInAppReview("audit_search_completed")
                     }
                 )
             }

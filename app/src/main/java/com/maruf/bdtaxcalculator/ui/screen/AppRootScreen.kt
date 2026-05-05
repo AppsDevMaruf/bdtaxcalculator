@@ -34,7 +34,9 @@ fun AppRootScreen(
     language: String,
     themeMode: String,
     onLanguageChange: (String) -> Unit,
-    onThemeModeChange: (String) -> Unit
+    onThemeModeChange: (String) -> Unit,
+    onRequestInAppReview: (String) -> Unit,
+    onOpenStoreListing: () -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -106,11 +108,15 @@ fun AppRootScreen(
             }
 
             composable(Screen.TaxCalculator.route) {
-                TaxCalculatorScreen()
+                TaxCalculatorScreen(
+                    onRequestInAppReview = onRequestInAppReview
+                )
             }
 
             composable(Screen.AuditChecker.route) {
-                AuditCheckerScreen()
+                AuditCheckerScreen(
+                    onRequestInAppReview = onRequestInAppReview
+                )
             }
 
             composable(Screen.Profile.route) {
@@ -118,7 +124,8 @@ fun AppRootScreen(
                     language = language,
                     themeMode = themeMode,
                     onLanguageChange = onLanguageChange,
-                    onThemeModeChange = onThemeModeChange
+                    onThemeModeChange = onThemeModeChange,
+                    onRateApp = onOpenStoreListing
                 )
             }
         }

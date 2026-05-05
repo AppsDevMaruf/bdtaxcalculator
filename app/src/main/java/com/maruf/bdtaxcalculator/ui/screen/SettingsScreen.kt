@@ -1,6 +1,5 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
@@ -55,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -67,12 +67,17 @@ import com.maruf.bdtaxcalculator.tax.TaxDefaults
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.ui.AppUiPreferences
 import com.maruf.bdtaxcalculator.ui.localizedText
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorFieldText
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoDark
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientBottom
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientMiddle
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientTop
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorPanel
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftBlue
@@ -87,7 +92,8 @@ fun ProfileScreen(
     language: String,
     themeMode: String,
     onLanguageChange: (String) -> Unit,
-    onThemeModeChange: (String) -> Unit
+    onThemeModeChange: (String) -> Unit,
+    onRateApp: () -> Unit
 ) {
     val context = LocalContext.current
     var selectedTaxpayerType by remember {
@@ -115,7 +121,16 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(CalculatorBackground)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        CalculatorGradientTop,
+                        CalculatorGradientMiddle,
+                        CalculatorGradientBottom
+                    )
+                )
+            )
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .navigationBarsPadding()
@@ -252,7 +267,7 @@ fun ProfileScreen(
                 icon = Icons.Default.Star,
                 title = localizedText("রেট দিন", "Rate app"),
                 subtitle = localizedText("Play Store-এ রেটিং দিন।", "Rate us on the Play Store."),
-                onClick = { context.openPlayStore() }
+                onClick = onRateApp
             )
             ActionRow(
                 icon = Icons.Default.Email,
@@ -339,13 +354,13 @@ private fun SettingsHeader() {
 private fun PrivacyHeroCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(1.dp, CalculatorBorder)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -390,7 +405,7 @@ private fun PrivacyHeroCard() {
 private fun PrivacyPill(label: String) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = HomeSoftGreen,
+        //color = HomeSoftGreen,
         border = BorderStroke(1.dp, CalculatorBorder)
     ) {
         Text(
@@ -410,13 +425,13 @@ private fun AppLanguageRowCard(language: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, HomeBorder)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -463,7 +478,7 @@ private fun LanguageBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = CalculatorPanel,
         dragHandle = {
             Surface(
                 modifier = Modifier
@@ -528,6 +543,7 @@ private fun LanguageOptionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .background(if (selected) HomeSoftGreen else Color.Transparent)
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -568,25 +584,25 @@ private fun ThemeToggleCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, HomeBorder)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                color = if (isDarkMode) HomeSoftBlue else HomeSoftGreen,
+                color = if (isDarkMode) HomeSoftGreen else CalculatorSurfaceAlt,
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(
                     if (isDarkMode) Icons.Default.DarkMode else Icons.Default.WbSunny,
                     contentDescription = null,
                     modifier = Modifier.padding(10.dp).size(22.dp),
-                    tint = if (isDarkMode) CalculatorInfoDark else CalculatorSuccess
+                    tint = if (isDarkMode) CalculatorSuccess else CalculatorMutedSoft
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -620,7 +636,7 @@ private fun IosStyleSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val trackColor = if (checked) CalculatorSuccess else Color(0xFFE5E7EB)
+    val trackColor = if (checked) CalculatorSuccess else HomeBorder
     val thumbOffset = if (checked) 26.dp else 2.dp
 
     Surface(
@@ -640,7 +656,7 @@ private fun IosStyleSwitch(
                     .offset(x = thumbOffset)
                     .size(28.dp),
                 shape = CircleShape,
-                color = Color.White,
+                color = CalculatorSurfaceAlt,
                 shadowElevation = 4.dp
             ) {}
         }
@@ -660,7 +676,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = RoundedCornerShape(20.dp),
             border = BorderStroke(1.dp, HomeBorder)
@@ -779,14 +795,14 @@ private fun StaticRow(
 @Composable
 private fun SettingIcon(icon: ImageVector, selected: Boolean) {
     Surface(
-        color = if (selected) CalculatorSuccess else HomeSoftBlue,
+        color = if (selected) CalculatorSuccess else CalculatorSurfaceAlt,
         shape = RoundedCornerShape(13.dp)
     ) {
         Icon(
             icon,
             contentDescription = null,
             modifier = Modifier.padding(9.dp).size(20.dp),
-            tint = if (selected) MaterialTheme.colorScheme.onPrimary else CalculatorInfoDark
+            tint = if (selected) MaterialTheme.colorScheme.onPrimary else CalculatorMutedSoft
         )
     }
 }
@@ -804,17 +820,6 @@ private fun Context.shareApp() {
                 "https://play.google.com/store/apps/details?id=$packageName".toUri())
     }
     startActivity(Intent.createChooser(shareIntent, "Tax Calculator BD অ্যাপটি শেয়ার করুন"))
-}
-
-private fun Context.openPlayStore() {
-    val marketIntent = Intent(Intent.ACTION_VIEW, "market://details?id=$packageName".toUri())
-    val webIntent = Intent(Intent.ACTION_VIEW,
-        "https://play.google.com/store/apps/details?id=$packageName".toUri())
-    try {
-        startActivity(marketIntent)
-    } catch (_: ActivityNotFoundException) {
-        startActivity(webIntent)
-    }
 }
 
 private fun Context.sendFeedbackEmail() {

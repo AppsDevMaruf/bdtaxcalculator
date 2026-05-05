@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessaging
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
+import com.maruf.bdtaxcalculator.play.InAppReviewManager
 import com.maruf.bdtaxcalculator.play.PlayStoreUpdateManager
 import com.maruf.bdtaxcalculator.ui.AppUiPreferences
 import com.maruf.bdtaxcalculator.ui.LocalAppLanguage
@@ -29,6 +30,7 @@ import com.maruf.bdtaxcalculator.ui.theme.BDTaxCalculatorTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var playStoreUpdateManager: PlayStoreUpdateManager
+    private lateinit var inAppReviewManager: InAppReviewManager
 
     private val requestNotificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -48,6 +50,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         playStoreUpdateManager = PlayStoreUpdateManager(this, playUpdateLauncher)
+        inAppReviewManager = InAppReviewManager(this)
+        inAppReviewManager.recordAppOpen()
         playStoreUpdateManager.register()
         playStoreUpdateManager.checkForUpdates()
         askNotificationPermission()
@@ -78,7 +82,9 @@ class MainActivity : ComponentActivity() {
                             onThemeModeChange = { newThemeMode ->
                                 themeMode = newThemeMode
                                 AppUiPreferences.setThemeMode(this, newThemeMode)
-                            }
+                            },
+                            onRequestInAppReview = inAppReviewManager::requestAfterMeaningfulAction,
+                            onOpenStoreListing = inAppReviewManager::openStoreListing
                         )
                     }
                 }

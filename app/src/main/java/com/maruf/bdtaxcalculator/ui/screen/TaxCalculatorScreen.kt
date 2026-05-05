@@ -59,6 +59,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,6 +122,7 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import com.maruf.utils.noRippleClickable
+import kotlinx.coroutines.delay
 
 private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
     save = { list -> list.associate { it.type to it.amount } },
@@ -145,7 +147,8 @@ private fun normalizeNumericInput(input: String, maxLength: Int = MaxMoneyInputL
 
 @Composable
 fun TaxCalculatorScreen(
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    onRequestInAppReview: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val hideKeyboardOnScrollConnection = rememberKeyboardDismissOnScrollConnection()
@@ -183,6 +186,13 @@ fun TaxCalculatorScreen(
         totalIncome = salaryBreakdown.totalIncome,
         taxAfterRebate = result.taxAfterRebate
     )
+
+    LaunchedEffect(salaryBreakdown.totalIncome, result.taxAfterRebate) {
+        if (salaryBreakdown.totalIncome > 0L) {
+            delay(1_800)
+            onRequestInAppReview("tax_calculation_completed")
+        }
+    }
 
     Scaffold(
         topBar = {
