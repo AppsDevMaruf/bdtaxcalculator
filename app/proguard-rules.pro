@@ -1,39 +1,30 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# Project-specific R8 rules for production release builds.
+#
+# Android framework entry points, Compose, Firebase, and Play Core already ship
+# consumer rules through their dependencies. Keep this file focused on app code
+# that can be reached dynamically or is needed for readable crash reporting.
 
-# Keep Compose classes
--keep class androidx.compose.** { *; }
--keep class kotlin.** { *; }
+# Preserve source locations so Crashlytics can deobfuscate release stack traces.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Keep your application classes
--keep class com.bdtaxcalculator.app.** { *; }
+# Keep annotations/signatures that libraries may inspect at runtime.
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# Keep Parcelable implementations
+# Manifest/service entry points. The Android Gradle Plugin usually protects
+# these, but keeping them explicit avoids fragile release-only startup issues.
+-keep class com.maruf.bdtaxcalculator.BDTaxApplication { *; }
+-keep class com.maruf.bdtaxcalculator.firebase.TaxProMessagingService { *; }
+
+# Keep Parcelable creators if Parcelable models are added later.
 -keepclassmembers class * implements android.os.Parcelable {
-    static ** CREATOR;
+    public static final android.os.Parcelable$Creator CREATOR;
 }
 
-# Keep data classes
--keepclassmembers class * {
-    @kotlinx.serialization.SerialName <fields>;
-}
-
-# Kotlin Coroutines
--keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
-
-# Remove logging in release
+# Remove verbose/debug/info logs from release builds. Keep warnings/errors for
+# production diagnostics and Play pre-launch report readability.
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
     public static *** i(...);
-}
-
-# Keep line numbers for debugging stack traces
--keepattributes SourceFile,LineNumberTable
-
-# Remove intrinsics
--assumenosideeffects class kotlin.jvm.internal.Intrinsics {
-    static void checkParameterIsNotNull(java.lang.Object, java.lang.String);
 }

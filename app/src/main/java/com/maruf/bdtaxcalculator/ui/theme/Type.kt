@@ -14,7 +14,7 @@ val TiroBanglaFontFamily = FontFamily(
 )
 
 // Set of Material typography styles to start with
-val Typography = Typography(
+val AppTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = TiroBanglaFontFamily,
         fontWeight = FontWeight.Normal,

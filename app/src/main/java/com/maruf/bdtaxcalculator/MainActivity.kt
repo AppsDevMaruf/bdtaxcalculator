@@ -9,13 +9,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessaging
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.play.PlayStoreUpdateManager
+import com.maruf.bdtaxcalculator.ui.AppUiPreferences
+import com.maruf.bdtaxcalculator.ui.LocalAppLanguage
 import com.maruf.bdtaxcalculator.ui.screen.AppRootScreen
 import com.maruf.bdtaxcalculator.ui.theme.BDTaxCalculatorTheme
 
@@ -45,12 +53,34 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
         refreshFcmToken()
         setContent {
-            BDTaxCalculatorTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    AppRootScreen()
+            var language by remember { mutableStateOf(AppUiPreferences.getLanguage(this)) }
+            var themeMode by remember { mutableStateOf(AppUiPreferences.getThemeMode(this)) }
+            val systemDark = isSystemInDarkTheme()
+            val darkTheme = when (themeMode) {
+                AppUiPreferences.themeDark -> true
+                AppUiPreferences.themeLight -> false
+                else -> systemDark
+            }
+
+            CompositionLocalProvider(LocalAppLanguage provides language) {
+                BDTaxCalculatorTheme(darkTheme = darkTheme) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        AppRootScreen(
+                            language = language,
+                            themeMode = themeMode,
+                            onLanguageChange = { newLanguage ->
+                                language = newLanguage
+                                AppUiPreferences.setLanguage(this, newLanguage)
+                            },
+                            onThemeModeChange = { newThemeMode ->
+                                themeMode = newThemeMode
+                                AppUiPreferences.setThemeMode(this, newThemeMode)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -89,4 +119,3 @@ class MainActivity : ComponentActivity() {
 
 
 }
-

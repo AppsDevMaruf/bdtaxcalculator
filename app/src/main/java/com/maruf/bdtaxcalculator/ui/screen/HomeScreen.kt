@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
+import com.maruf.bdtaxcalculator.ui.localizedText
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlueDark
 import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
@@ -357,25 +358,25 @@ fun HomeBottomNavigation(
         ) {
             BottomNavItem(
                 icon = Icons.Default.Home,
-                label = "হোম",
+                label = localizedText("হোম", "Home"),
                 isSelected = selectedDestination == AppDestination.Home,
                 onClick = onOpenHome
             )
             BottomNavItem(
                 icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                label = "ক্যালকুলেটর",
+                label = localizedText("ক্যালকুলেটর", "Calculator"),
                 isSelected = selectedDestination == AppDestination.TaxCalculator,
                 onClick = onOpenTaxCalculator
             )
             BottomNavItem(
                 icon = Icons.Default.Security,
-                label = "অডিট",
+                label = localizedText("অডিট", "Audit"),
                 isSelected = selectedDestination == AppDestination.AuditChecker,
                 onClick = onOpenAuditChecker
             )
             BottomNavItem(
                 icon = Icons.Default.Settings,
-                label = "সেটিংস",
+                label = localizedText("সেটিংস", "Settings"),
                 isSelected = selectedDestination == AppDestination.Profile,
                 onClick = onOpenProfile
             )

@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.maruf.bdtaxcalculator" />
+                  <option name="mobileSdkAppId" value="1:852377356713:android:b2969a7909ff6c22765cb8" />
+                  <option name="projectId" value="bd-tax-calculator-4415f" />
+                  <option name="projectNumber" value="852377356713" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

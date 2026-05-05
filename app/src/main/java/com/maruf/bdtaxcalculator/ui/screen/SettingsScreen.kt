@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,12 +37,17 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,13 +65,13 @@ import androidx.compose.ui.unit.sp
 import com.maruf.bdtaxcalculator.tax.LocalTaxPreferenceStore
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
+import com.maruf.bdtaxcalculator.ui.AppUiPreferences
+import com.maruf.bdtaxcalculator.ui.localizedText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorFieldText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoDark
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorPanel
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
@@ -75,7 +82,13 @@ import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import androidx.core.net.toUri
 
 @Composable
-fun ProfileScreen() {
+@OptIn(ExperimentalMaterial3Api::class)
+fun ProfileScreen(
+    language: String,
+    themeMode: String,
+    onLanguageChange: (String) -> Unit,
+    onThemeModeChange: (String) -> Unit
+) {
     val context = LocalContext.current
     var selectedTaxpayerType by remember {
         mutableStateOf(LocalTaxPreferenceStore.getDefaultTaxpayerType(context))
@@ -83,12 +96,26 @@ fun ProfileScreen() {
     var selectedAssessmentType by remember {
         mutableStateOf(LocalTaxPreferenceStore.getAssessmentType(context))
     }
+    var showLanguageSheet by remember { mutableStateOf(false) }
+    val languageSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val appVersion = remember(context.packageName) { context.getAppVersionName() }
+
+    if (showLanguageSheet) {
+        LanguageBottomSheet(
+            language = language,
+            sheetState = languageSheetState,
+            onDismiss = { showLanguageSheet = false },
+            onLanguageChange = { selectedLanguage ->
+                onLanguageChange(selectedLanguage)
+                showLanguageSheet = false
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CalculatorBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .navigationBarsPadding()
@@ -101,9 +128,30 @@ fun ProfileScreen() {
 
         Spacer(modifier = Modifier.size(20.dp))
 
-        SettingsSection(title = "লোকাল ট্যাক্স সেটআপ") {
+        AppLanguageRowCard(
+            language = language,
+            onClick = { showLanguageSheet = true }
+        )
+
+        Spacer(modifier = Modifier.size(18.dp))
+
+        ThemeToggleCard(
+            isDarkMode = themeMode == AppUiPreferences.themeDark,
+            onThemeChange = { isDark ->
+                onThemeModeChange(
+                    if (isDark) AppUiPreferences.themeDark else AppUiPreferences.themeLight
+                )
+            }
+        )
+
+        Spacer(modifier = Modifier.size(18.dp))
+
+        SettingsSection(title = localizedText("লোকাল ট্যাক্স সেটআপ", "Local tax setup")) {
             Text(
-                "নতুন হিসাব শুরু হলে এই সেটিংস ডিফল্ট হিসেবে ব্যবহার হবে।",
+                localizedText(
+                    "নতুন হিসাব শুরু হলে এই সেটিংস ডিফল্ট হিসেবে ব্যবহার হবে।",
+                    "These settings are used as defaults for new calculations."
+                ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 fontSize = 13.sp,
                 lineHeight = 20.sp,
@@ -115,7 +163,10 @@ fun ProfileScreen() {
                 PreferenceChoiceRow(
                     icon = type.icon ?: Icons.Default.Person,
                     title = type.label,
-                    subtitle = "করমুক্ত সীমা: ৳ ${formatBengaliNumber(type.taxFreeLimit)}",
+                    subtitle = localizedText(
+                        "করমুক্ত সীমা: ৳ ${formatBengaliNumber(type.taxFreeLimit)}",
+                        "Tax-free limit: BDT ${type.taxFreeLimit}"
+                    ),
                     selected = selectedTaxpayerType == type.id,
                     onClick = {
                         selectedTaxpayerType = type.id
@@ -127,11 +178,14 @@ fun ProfileScreen() {
 
         Spacer(modifier = Modifier.size(18.dp))
 
-        SettingsSection(title = "অ্যাসেসমেন্ট ধরন") {
+        SettingsSection(title = localizedText("অ্যাসেসমেন্ট ধরন", "Assessment type")) {
             PreferenceChoiceRow(
                 icon = Icons.Default.CheckCircle,
-                title = "সাধারণ অ্যাসেসমেন্ট",
-                subtitle = "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())}",
+                title = localizedText("সাধারণ অ্যাসেসমেন্ট", "Regular assessment"),
+                subtitle = localizedText(
+                    "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())}",
+                    "Minimum tax: BDT ${TaxDefaults.minimumTax.toLong()}"
+                ),
                 selected = selectedAssessmentType == LocalTaxPreferenceStore.assessmentRegular,
                 onClick = {
                     selectedAssessmentType = LocalTaxPreferenceStore.assessmentRegular
@@ -140,8 +194,11 @@ fun ProfileScreen() {
             )
             PreferenceChoiceRow(
                 icon = Icons.Default.Calculate,
-                title = "নতুন অ্যাসেসমেন্ট",
-                subtitle = "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())}",
+                title = localizedText("নতুন অ্যাসেসমেন্ট", "New assessment"),
+                subtitle = localizedText(
+                    "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())}",
+                    "Minimum tax: BDT ${TaxDefaults.newAssessmentMinimumTax.toLong()}"
+                ),
                 selected = selectedAssessmentType == LocalTaxPreferenceStore.assessmentNew,
                 onClick = {
                     selectedAssessmentType = LocalTaxPreferenceStore.assessmentNew
@@ -152,49 +209,67 @@ fun ProfileScreen() {
 
         Spacer(modifier = Modifier.size(18.dp))
 
-        SettingsSection(title = "প্রাইভেসি ও ডেটা") {
+        SettingsSection(title = localizedText("প্রাইভেসি ও ডেটা", "Privacy & data")) {
             InfoRow(
                 icon = Icons.Default.Lock,
-                title = "অফলাইন ও প্রাইভেট",
-                subtitle = "কোনো লগইন, সার্ভার, ডেটাবেস বা ইনপুট সংরক্ষণ নেই।"
+                title = localizedText("অফলাইন ও প্রাইভেট", "Offline and private"),
+                subtitle = localizedText(
+                    "কোনো লগইন, সার্ভার, ডেটাবেস বা ইনপুট সংরক্ষণ নেই।",
+                    "No login, server, database, or saved tax input."
+                )
             )
             InfoRow(
                 icon = Icons.Default.Info,
-                title = "রুলস ডেটা",
-                subtitle = "করবর্ষ ${TaxDefaults.taxYearLabel}; অডিট ডেটা অ্যাপের static JSON থেকে লোড হয়।"
+                title = localizedText("রুলস ডেটা", "Rules data"),
+                subtitle = localizedText(
+                    "করবর্ষ ${TaxDefaults.taxYearLabel}; অডিট ডেটা অ্যাপের static JSON থেকে লোড হয়।",
+                    "Tax year ${TaxDefaults.taxYearLabel}; audit data loads from static JSON inside the app."
+                )
             )
             InfoRow(
                 icon = Icons.Default.Settings,
-                title = "শুধু লোকাল পছন্দ",
-                subtitle = "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট ধরন শুধু এই ডিভাইসে থাকে।"
+                title = localizedText("শুধু লোকাল পছন্দ", "Local preferences only"),
+                subtitle = localizedText(
+                    "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট ধরন শুধু এই ডিভাইসে থাকে।",
+                    "Default taxpayer and assessment choices stay only on this device."
+                )
             )
         }
 
         Spacer(modifier = Modifier.size(18.dp))
 
-        SettingsSection(title = "সহায়তা") {
+        SettingsSection(title = localizedText("সহায়তা", "Support")) {
             ActionRow(
                 icon = Icons.Default.Share,
-                title = "অ্যাপ শেয়ার করুন",
-                subtitle = "Tax Calculator BD অন্যদের জানাতে শেয়ার করুন।",
+                title = localizedText("অ্যাপ শেয়ার করুন", "Share app"),
+                subtitle = localizedText(
+                    "Tax Calculator BD অন্যদের জানাতে শেয়ার করুন।",
+                    "Share Tax Calculator BD with others."
+                ),
                 onClick = { context.shareApp() }
             )
             ActionRow(
                 icon = Icons.Default.Star,
-                title = "রেট দিন",
-                subtitle = "Play Store-এ রেটিং দিন।",
+                title = localizedText("রেট দিন", "Rate app"),
+                subtitle = localizedText("Play Store-এ রেটিং দিন।", "Rate us on the Play Store."),
                 onClick = { context.openPlayStore() }
             )
             ActionRow(
                 icon = Icons.Default.Email,
-                title = "সমস্যা জানান",
-                subtitle = "ভুল হিসাব বা ডেটা সমস্যা জানাতে ইমেইল করুন।",
+                title = localizedText("সমস্যা জানান", "Report issue"),
+                subtitle = localizedText(
+                    "ভুল হিসাব বা ডেটা সমস্যা জানাতে ইমেইল করুন।",
+                    "Email us about calculation or data issues."
+                ),
                 onClick = { context.sendFeedbackEmail() }
             )
             ActionRow(
                 icon = Icons.Default.Delete,
-                title = "লোকাল সেটিংস রিসেট",
-                subtitle = "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট সেটিংস পরিষ্কার করুন।",
+                title = localizedText("লোকাল সেটিংস রিসেট", "Reset local settings"),
+                subtitle = localizedText(
+                    "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট সেটিংস পরিষ্কার করুন।",
+                    "Clear default taxpayer and assessment settings."
+                ),
                 onClick = {
                     LocalTaxPreferenceStore.clear(context)
                     selectedTaxpayerType = LocalTaxPreferenceStore.getDefaultTaxpayerType(context)
@@ -206,7 +281,10 @@ fun ProfileScreen() {
         Spacer(modifier = Modifier.size(20.dp))
 
         Text(
-            "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
+            localizedText(
+                "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
+                "Based on Bangladesh National Board of Revenue (NBR) rules"
+            ),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             fontSize = 12.sp,
@@ -214,7 +292,7 @@ fun ProfileScreen() {
             fontFamily = TiroBanglaFontFamily
         )
         Text(
-            "সংস্করণ $appVersion",
+            localizedText("সংস্করণ $appVersion", "Version $appVersion"),
             modifier = Modifier.align(Alignment.CenterHorizontally),
             fontSize = 12.sp,
             color = CalculatorMutedSoft,
@@ -236,14 +314,17 @@ private fun SettingsHeader() {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column {
                 Text(
-                    "সেটিংস",
+                    localizedText("সেটিংস", "Settings"),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = HomeTextPrimary,
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    "প্রাইভেসি-ফার্স্ট লোকাল কনফিগারেশন",
+                    localizedText(
+                        "প্রাইভেসি-ফার্স্ট লোকাল কনফিগারেশন",
+                        "Privacy-first local configuration"
+                    ),
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
                     color = CalculatorMuted,
@@ -258,7 +339,7 @@ private fun SettingsHeader() {
 private fun PrivacyHeroCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(1.dp, CalculatorBorder)
@@ -278,14 +359,17 @@ private fun PrivacyHeroCard() {
                 }
                 Column {
                     Text(
-                        "আপনার ডেটা আপনার ডিভাইসে",
+                        localizedText("আপনার ডেটা আপনার ডিভাইসে", "Your data stays on your device"),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = HomeTextPrimary,
                         fontFamily = TiroBanglaFontFamily
                     )
                     Text(
-                        "Tax Calculator BD কোনো ব্যক্তিগত প্রোফাইল তৈরি করে না।",
+                        localizedText(
+                            "Tax Calculator BD কোনো ব্যক্তিগত প্রোফাইল তৈরি করে না।",
+                            "Tax Calculator BD does not create a personal profile."
+                        ),
                         fontSize = 13.sp,
                         color = CalculatorMuted,
                         fontFamily = TiroBanglaFontFamily
@@ -294,9 +378,9 @@ private fun PrivacyHeroCard() {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PrivacyPill("নো লগইন")
-                PrivacyPill("নো সার্ভার")
-                PrivacyPill("নো ইনপুট সেভ")
+                PrivacyPill(localizedText("নো লগইন", "No login"))
+                PrivacyPill(localizedText("নো সার্ভার", "No server"))
+                PrivacyPill(localizedText("নো ইনপুট সেভ", "No input save"))
             }
         }
     }
@@ -317,6 +401,249 @@ private fun PrivacyPill(label: String) {
             fontWeight = FontWeight.Bold,
             fontFamily = TiroBanglaFontFamily
         )
+    }
+}
+
+@Composable
+private fun AppLanguageRowCard(language: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, HomeBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(color = HomeSoftBlue, shape = RoundedCornerShape(14.dp)) {
+                Text(
+                    if (language == AppUiPreferences.languageEnglish) "\uD83C\uDDFA\uD83C\uDDF8" else "\uD83C\uDDE7\uD83C\uDDE9",
+                    modifier = Modifier.padding(10.dp),
+                    fontSize = 20.sp
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    localizedText("অ্যাপের ভাষা", "App Language"),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HomeTextPrimary,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    if (language == AppUiPreferences.languageEnglish) "English" else "বাংলা",
+                    fontSize = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = CalculatorMutedSoft
+            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun LanguageBottomSheet(
+    language: String,
+    sheetState: androidx.compose.material3.SheetState,
+    onDismiss: () -> Unit,
+    onLanguageChange: (String) -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = {
+            Surface(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 8.dp)
+                    .size(width = 48.dp, height = 5.dp),
+                shape = RoundedCornerShape(999.dp),
+                color = HomeBorder
+            ) {}
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 22.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp)) {
+                Text(
+                    localizedText("অ্যাপের ভাষা", "App Language"),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HomeTextPrimary,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    localizedText(
+                        "ভাষা পুরো অ্যাপে প্রয়োগ হবে",
+                        "Language changes will be applied to the entire app"
+                    ),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+
+            Spacer(modifier = Modifier.size(12.dp))
+
+            LanguageOptionRow(
+                flag = "\uD83C\uDDFA\uD83C\uDDF8",
+                title = "English",
+                selected = language == AppUiPreferences.languageEnglish,
+                onClick = { onLanguageChange(AppUiPreferences.languageEnglish) }
+            )
+            LanguageOptionRow(
+                flag = "\uD83C\uDDE7\uD83C\uDDE9",
+                title = "বাংলা",
+                selected = language == AppUiPreferences.languageBangla,
+                onClick = { onLanguageChange(AppUiPreferences.languageBangla) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LanguageOptionRow(
+    flag: String,
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            flag,
+            fontSize = 20.sp
+        )
+        Text(
+            title,
+            modifier = Modifier.weight(1f),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = HomeTextPrimary,
+            fontFamily = TiroBanglaFontFamily
+        )
+        if (selected) {
+            Surface(
+                modifier = Modifier.size(28.dp),
+                shape = CircleShape,
+                color = CalculatorSuccess
+            ) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeToggleCard(
+    isDarkMode: Boolean,
+    onThemeChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, HomeBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                color = if (isDarkMode) HomeSoftBlue else HomeSoftGreen,
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(
+                    if (isDarkMode) Icons.Default.DarkMode else Icons.Default.WbSunny,
+                    contentDescription = null,
+                    modifier = Modifier.padding(10.dp).size(22.dp),
+                    tint = if (isDarkMode) CalculatorInfoDark else CalculatorSuccess
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    localizedText("থিম", "Theme"),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HomeTextPrimary,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    localizedText(
+                        if (isDarkMode) "ডার্ক মোড চালু আছে" else "লাইট মোড চালু আছে",
+                        if (isDarkMode) "Dark mode is enabled" else "Light mode is enabled"
+                    ),
+                    fontSize = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+            IosStyleSwitch(
+                checked = isDarkMode,
+                onCheckedChange = onThemeChange
+            )
+        }
+    }
+}
+
+@Composable
+private fun IosStyleSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val trackColor = if (checked) CalculatorSuccess else Color(0xFFE5E7EB)
+    val thumbOffset = if (checked) 26.dp else 2.dp
+
+    Surface(
+        modifier = Modifier
+            .size(width = 56.dp, height = 32.dp)
+            .clickable { onCheckedChange(!checked) },
+        shape = RoundedCornerShape(999.dp),
+        color = trackColor,
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Surface(
+                modifier = Modifier
+                    .offset(x = thumbOffset)
+                    .size(28.dp),
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 4.dp
+            ) {}
+        }
     }
 }
 
@@ -466,8 +793,8 @@ private fun SettingIcon(icon: ImageVector, selected: Boolean) {
 
 private fun Context.getAppVersionName(): String {
     return runCatching {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.5"
-    }.getOrDefault("1.0.5")
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.6"
+    }.getOrDefault("1.0.6")
 }
 
 private fun Context.shareApp() {

@@ -30,7 +30,12 @@ enum class AppDestination {
 }
 
 @Composable
-fun AppRootScreen() {
+fun AppRootScreen(
+    language: String,
+    themeMode: String,
+    onLanguageChange: (String) -> Unit,
+    onThemeModeChange: (String) -> Unit
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -109,7 +114,12 @@ fun AppRootScreen() {
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    language = language,
+                    themeMode = themeMode,
+                    onLanguageChange = onLanguageChange,
+                    onThemeModeChange = onThemeModeChange
+                )
             }
         }
     }
