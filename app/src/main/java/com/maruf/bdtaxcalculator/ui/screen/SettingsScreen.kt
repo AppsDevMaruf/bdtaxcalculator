@@ -2,6 +2,15 @@ package com.maruf.bdtaxcalculator.ui.screen
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +41,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -93,6 +103,8 @@ fun ProfileScreen(
     themeMode: String,
     onLanguageChange: (String) -> Unit,
     onThemeModeChange: (String) -> Unit,
+    themePalette: String,
+    onThemePaletteChange: (String) -> Unit,
     onRateApp: () -> Unit
 ) {
     val context = LocalContext.current
@@ -136,11 +148,6 @@ fun ProfileScreen(
             .navigationBarsPadding()
     ) {
         SettingsHeader()
-
-        Spacer(modifier = Modifier.size(20.dp))
-
-        PrivacyHeroCard()
-
         Spacer(modifier = Modifier.size(20.dp))
 
         AppLanguageRowCard(
@@ -150,8 +157,9 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.size(18.dp))
 
+        val isDarkMode = themeMode == AppUiPreferences.themeDark
         ThemeToggleCard(
-            isDarkMode = themeMode == AppUiPreferences.themeDark,
+            isDarkMode = isDarkMode,
             onThemeChange = { isDark ->
                 onThemeModeChange(
                     if (isDark) AppUiPreferences.themeDark else AppUiPreferences.themeLight
@@ -159,7 +167,34 @@ fun ProfileScreen(
             }
         )
 
-        Spacer(modifier = Modifier.size(18.dp))
+        AnimatedVisibility(
+            visible = isDarkMode,
+            enter = fadeIn(animationSpec = tween(180)) +
+                expandVertically(
+                    animationSpec = tween(260),
+                    expandFrom = Alignment.Top
+                ),
+            exit = fadeOut(animationSpec = tween(140)) +
+                shrinkVertically(
+                    animationSpec = tween(220),
+                    shrinkTowards = Alignment.Top
+                )
+        ) {
+            Column(modifier = Modifier.animateContentSize(animationSpec = tween(260))) {
+                Spacer(modifier = Modifier.size(18.dp))
+
+                ThemePaletteCard(
+                    themePalette = themePalette,
+                    onThemePaletteChange = onThemePaletteChange
+                )
+
+                Spacer(modifier = Modifier.size(18.dp))
+            }
+        }
+
+        if (!isDarkMode) {
+            Spacer(modifier = Modifier.size(18.dp))
+        }
 
         SettingsSection(title = localizedText("লোকাল ট্যাক্স সেটআপ", "Local tax setup")) {
             Text(
@@ -404,7 +439,7 @@ private fun PrivacyHeroCard() {
 @Composable
 private fun PrivacyPill(label: String) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         //color = HomeSoftGreen,
         border = BorderStroke(1.dp, CalculatorBorder)
     ) {
@@ -582,8 +617,21 @@ private fun ThemeToggleCard(
     isDarkMode: Boolean,
     onThemeChange: (Boolean) -> Unit
 ) {
+    val iconContainerColor by animateColorAsState(
+        targetValue = if (isDarkMode) HomeSoftGreen else CalculatorSurfaceAlt,
+        animationSpec = tween(220),
+        label = "theme_icon_container_color"
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (isDarkMode) CalculatorSuccess else CalculatorMutedSoft,
+        animationSpec = tween(220),
+        label = "theme_icon_tint"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(260)),
         colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(10.dp),
@@ -595,14 +643,14 @@ private fun ThemeToggleCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                color = if (isDarkMode) HomeSoftGreen else CalculatorSurfaceAlt,
-                shape = RoundedCornerShape(14.dp)
+                color = iconContainerColor,
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(
                     if (isDarkMode) Icons.Default.DarkMode else Icons.Default.WbSunny,
                     contentDescription = null,
                     modifier = Modifier.padding(10.dp).size(22.dp),
-                    tint = if (isDarkMode) CalculatorSuccess else CalculatorMutedSoft
+                    tint = iconTint
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -632,12 +680,174 @@ private fun ThemeToggleCard(
 }
 
 @Composable
+private fun ThemePaletteCard(
+    themePalette: String,
+    onThemePaletteChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, HomeBorder)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    color = CalculatorSurfaceAlt,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Palette,
+                        contentDescription = null,
+                        modifier = Modifier.padding(10.dp).size(22.dp),
+                        tint = CalculatorSuccess
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        localizedText("ডার্ক থিম কালার", "Choose the Dark Theme color"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = HomeTextPrimary,
+                        fontFamily = TiroBanglaFontFamily
+                    )
+                    Text(
+                        localizedText(
+                            "আপনার পছন্দের কালার বেছে নিন",
+                            "Choose your preferred app color style"
+                        ),
+                        fontSize = 12.sp,
+                        color = CalculatorMuted,
+                        fontFamily = TiroBanglaFontFamily
+                    )
+                }
+            }
+
+            PaletteOptionRow(
+                title = localizedText("অলিভ নাইট", "Olive Night"),
+                subtitle = localizedText(
+                    "Wise-style গভীর অলিভ ডার্ক প্যাটার্ন",
+                    "Wise-style deep olive dark pattern"
+                ),
+                selected = themePalette == AppUiPreferences.themePaletteOlive,
+                swatches = listOf(Color(0xFF163300)),
+                onClick = { onThemePaletteChange(AppUiPreferences.themePaletteOlive) }
+            )
+
+            PaletteOptionRow(
+                title = localizedText("ক্লাসিক গ্রিন", "Classic Green"),
+                subtitle = localizedText(
+                    "আগের এমেরাল্ড/গ্রিন ডার্ক প্যাটার্ন",
+                    "Previous emerald green dark pattern"
+                ),
+                selected = themePalette == AppUiPreferences.themePaletteClassicGreen,
+                swatches = listOf(Color(0xFF001E16)),
+                onClick = { onThemePaletteChange(AppUiPreferences.themePaletteClassicGreen) }
+            )
+
+            PaletteOptionRow(
+                title = localizedText("মিডনাইট ব্ল্যাক", "Midnight Black"),
+                subtitle = localizedText(
+                    "কালো ব্যাকগ্রাউন্ডের মিনিমাল ডার্ক প্যাটার্ন",
+                    "Minimal dark pattern based on black"
+                ),
+                selected = themePalette == AppUiPreferences.themePaletteMidnightBlack,
+                swatches = listOf(Color(0xFF000000)),
+                onClick = { onThemePaletteChange(AppUiPreferences.themePaletteMidnightBlack) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaletteOptionRow(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    swatches: List<Color>,
+    onClick: () -> Unit
+) {
+    val rowBackground by animateColorAsState(
+        targetValue = if (selected) HomeSoftGreen else Color.Transparent,
+        animationSpec = tween(180),
+        label = "palette_option_background"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(180))
+            .clickable(onClick = onClick)
+            .background(rowBackground)
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            swatches.forEach { color ->
+                Surface(
+                    modifier = Modifier.size(24.dp),
+                    shape = CircleShape,
+                    color = color,
+                    border = BorderStroke(1.dp, HomeBorder)
+                ) {}
+            }
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = HomeTextPrimary,
+                fontFamily = TiroBanglaFontFamily
+            )
+            Text(
+                subtitle,
+                fontSize = 12.sp,
+                color = CalculatorMuted,
+                fontFamily = TiroBanglaFontFamily
+            )
+        }
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(animationSpec = tween(140)),
+            exit = fadeOut(animationSpec = tween(100))
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = CalculatorSuccess
+            )
+        }
+    }
+}
+
+@Composable
 private fun IosStyleSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val trackColor = if (checked) CalculatorSuccess else HomeBorder
-    val thumbOffset = if (checked) 26.dp else 2.dp
+    val trackColor by animateColorAsState(
+        targetValue = if (checked) CalculatorSuccess else HomeBorder,
+        animationSpec = tween(220),
+        label = "theme_switch_track_color"
+    )
+    val thumbColor by animateColorAsState(
+        targetValue = CalculatorSurfaceAlt,
+        animationSpec = tween(220),
+        label = "theme_switch_thumb_color"
+    )
+    val thumbOffset by animateDpAsState(
+        targetValue = if (checked) 26.dp else 2.dp,
+        animationSpec = tween(220),
+        label = "theme_switch_thumb_offset"
+    )
 
     Surface(
         modifier = Modifier
@@ -656,7 +866,7 @@ private fun IosStyleSwitch(
                     .offset(x = thumbOffset)
                     .size(28.dp),
                 shape = CircleShape,
-                color = CalculatorSurfaceAlt,
+                color = thumbColor,
                 shadowElevation = 4.dp
             ) {}
         }
@@ -678,7 +888,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, HomeBorder)
         ) {
             Column {
@@ -796,7 +1006,7 @@ private fun StaticRow(
 private fun SettingIcon(icon: ImageVector, selected: Boolean) {
     Surface(
         color = if (selected) CalculatorSuccess else CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(13.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Icon(
             icon,

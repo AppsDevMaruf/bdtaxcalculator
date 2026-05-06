@@ -88,7 +88,7 @@ fun HomeScreen(
                 description = "আপনার বর্তমান আয়, বেতন কাঠামো এবং ছাড়ের তথ্য অনুযায়ী আয়কর হিসাব করুন।",
                 buttonText = "এখন হিসাব করুন",
                 buttonColor = HomeActionBlue,
-                accentBlock = HomeSoftBlue,
+                accentBlock = HomeSoftGreen,
                 badge = "করবর্ষ ${TaxDefaults.taxYearLabel}",
                 onClick = onOpenTaxCalculator
             )
@@ -174,7 +174,7 @@ private fun HomeServiceCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, HomeBorder)
     ) {
         Box(

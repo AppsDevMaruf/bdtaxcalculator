@@ -8,6 +8,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,13 +42,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -75,8 +73,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -98,8 +96,8 @@ import com.maruf.bdtaxcalculator.tax.calculateInvestmentRebate
 import com.maruf.bdtaxcalculator.tax.calculateSalaryBreakdown
 import com.maruf.bdtaxcalculator.tax.calculateTax
 import com.maruf.bdtaxcalculator.tax.calculateTaxSummary
-import com.maruf.bdtaxcalculator.tax.formatBengaliPercent
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
+import com.maruf.bdtaxcalculator.tax.formatBengaliPercent
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorAccentSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
@@ -432,7 +430,7 @@ private fun CalculatorOverviewCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Column(
             modifier = Modifier.padding(top = 10.dp, bottom = 10.dp),
@@ -555,8 +553,8 @@ private fun HeroMetricTile(
 ) {
     Surface(
         modifier = modifier,
-        color = CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(12.dp)
+        color = CalculatorAccentSoft,
+        shape = RoundedCornerShape(10.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, fontSize = 10.sp, lineHeight = 12.sp, color = CalculatorMuted, fontWeight = FontWeight.Medium, fontFamily = TiroBanglaFontFamily)
@@ -593,7 +591,7 @@ private fun CalculatorInputHub(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(10.dp)
         ) {
             Column(
                 modifier = Modifier.padding(top = 14.dp, bottom = 14.dp),
@@ -623,7 +621,7 @@ private fun CalculatorInputHub(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(10.dp)
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
@@ -697,7 +695,7 @@ private fun BulletInfoRow(text: String) {
         Text(
             text,
             modifier = Modifier.weight(1f),
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             color = CalculatorFieldText,
             lineHeight = 20.sp,
             fontFamily = TiroBanglaFontFamily
@@ -746,9 +744,9 @@ fun CurrencyInputField(
         Text(label, fontSize = 12.sp, lineHeight = 2.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(8.dp),
             color = CalculatorSurfaceAlt,
-            border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorBorder)
+            border = BorderStroke(1.dp, CalculatorBorder)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -798,7 +796,7 @@ private fun SalaryBreakdownCard(salary: SalaryBreakdown) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -871,7 +869,7 @@ private fun DetailPanel(
         Surface(
             color = CalculatorPanel,
             shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorDivider)
+            border = BorderStroke(1.dp, CalculatorDivider)
         ) {
             Column(
                 modifier = Modifier
@@ -925,7 +923,7 @@ private fun InvestmentInputSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -994,7 +992,7 @@ private fun InvestmentSummaryCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1137,8 +1135,8 @@ private fun TaxBreakdownCard(result: TaxResult) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CalculatorDivider)
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, CalculatorDivider)
     ) {
         Column(
             modifier = Modifier
@@ -1176,7 +1174,7 @@ private fun TaxBreakdownRow(slab: TaxBreakdown) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -1204,20 +1202,19 @@ private fun TaxpayerTypeItem(
             .height(88.dp)
             .noRippleClickable(onClick = onSelect),
         color = CalculatorSurfaceAlt,
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(10.dp),
     ) {
         Box(modifier = Modifier
             .fillMaxSize()
-            .padding(2.dp)
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = if (isSelected) CalculatorSuccess.copy(alpha = 0.08f) else CalculatorSurfaceAlt,
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(
+                border = BorderStroke(
                     width = if (isSelected) 2.dp else 1.dp,
                     color = if (isSelected) CalculatorSuccess else CalculatorBorder
-                )
+                ),
+                shape = RoundedCornerShape(10.dp),
             ) {}
 
             Column(
@@ -1266,24 +1263,6 @@ private fun TaxpayerTypeItem(
                     fontFamily = TiroBanglaFontFamily
                 )
             }
-
-            if (isSelected) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(15.dp),
-                    shape = CircleShape,
-                    color = CalculatorSuccess
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.padding(2.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
         }
     }
 }
@@ -1293,7 +1272,7 @@ private fun TaxFreeCard(limit: Long) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CalculatorInfoBackground),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),

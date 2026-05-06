@@ -71,7 +71,6 @@ import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDanger
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDangerSoft2
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientBottom
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorGradientMiddle
@@ -80,7 +79,6 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfo
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInfoBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorInk
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
@@ -220,7 +218,7 @@ private fun AuditTopBar(
 @Composable
 private fun HeaderIconButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
         Box(
@@ -245,7 +243,7 @@ private fun AuditSearchCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, CalculatorBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -299,9 +297,9 @@ private fun AuditSearchCard(
                 onClick = onSearch,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(48.dp),
                 enabled = canSearch,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = CalculatorSuccess,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -444,7 +442,7 @@ private fun AuditSummaryCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -478,7 +476,7 @@ private fun AuditStatusPill(
 ) {
     Surface(
         color = background,
-        shape = RoundedCornerShape(10.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
         Text(
             text,

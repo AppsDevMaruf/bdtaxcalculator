@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var language by remember { mutableStateOf(AppUiPreferences.getLanguage(this)) }
             var themeMode by remember { mutableStateOf(AppUiPreferences.getThemeMode(this)) }
+            var themePalette by remember { mutableStateOf(AppUiPreferences.getThemePalette(this)) }
             val systemDark = isSystemInDarkTheme()
             val darkTheme = when (themeMode) {
                 AppUiPreferences.themeDark -> true
@@ -67,7 +68,10 @@ class MainActivity : ComponentActivity() {
             }
 
             CompositionLocalProvider(LocalAppLanguage provides language) {
-                BDTaxCalculatorTheme(darkTheme = darkTheme) {
+                BDTaxCalculatorTheme(
+                    darkTheme = darkTheme,
+                    themePalette = themePalette
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
@@ -82,6 +86,11 @@ class MainActivity : ComponentActivity() {
                             onThemeModeChange = { newThemeMode ->
                                 themeMode = newThemeMode
                                 AppUiPreferences.setThemeMode(this, newThemeMode)
+                            },
+                            themePalette = themePalette,
+                            onThemePaletteChange = { newThemePalette ->
+                                themePalette = newThemePalette
+                                AppUiPreferences.setThemePalette(this, newThemePalette)
                             },
                             onRequestInAppReview = inAppReviewManager::requestAfterMeaningfulAction,
                             onOpenStoreListing = inAppReviewManager::openStoreListing

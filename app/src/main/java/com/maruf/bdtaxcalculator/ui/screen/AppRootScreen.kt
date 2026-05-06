@@ -35,6 +35,8 @@ fun AppRootScreen(
     themeMode: String,
     onLanguageChange: (String) -> Unit,
     onThemeModeChange: (String) -> Unit,
+    themePalette: String,
+    onThemePaletteChange: (String) -> Unit,
     onRequestInAppReview: (String) -> Unit,
     onOpenStoreListing: () -> Unit
 ) {
@@ -125,6 +127,8 @@ fun AppRootScreen(
                     themeMode = themeMode,
                     onLanguageChange = onLanguageChange,
                     onThemeModeChange = onThemeModeChange,
+                    themePalette = themePalette,
+                    onThemePaletteChange = onThemePaletteChange,
                     onRateApp = onOpenStoreListing
                 )
             }
