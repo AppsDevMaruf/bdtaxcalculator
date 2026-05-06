@@ -14,6 +14,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.maruf.bdtaxcalculator.MainActivity
 import com.maruf.bdtaxcalculator.R
+import com.maruf.bdtaxcalculator.notification.AppNotificationStore
 
 class TaxProMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
@@ -38,8 +39,15 @@ class TaxProMessagingService : FirebaseMessagingService() {
             ?: getString(R.string.app_name)
         val body = message.notification?.body
             ?: message.data["body"]
+            ?: message.data["message"]
             ?: return
 
+        AppNotificationStore.addFirebaseNotification(
+            context = this,
+            title = title,
+            body = body,
+            messageId = message.messageId
+        )
         showNotification(title = title, body = body)
     }
 
