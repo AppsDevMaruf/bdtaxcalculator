@@ -5,6 +5,8 @@ import com.maruf.bdtaxcalculator.tax.TaxDefaults
 import com.maruf.bdtaxcalculator.tax.calculateInvestmentRebate
 import com.maruf.bdtaxcalculator.tax.calculateSalaryBreakdown
 import com.maruf.bdtaxcalculator.tax.calculateTax
+import com.maruf.bdtaxcalculator.tax.calculateTaxFreeLimit
+import com.maruf.bdtaxcalculator.tax.calculateTaxPaymentAdjustment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,14 +14,24 @@ import org.junit.Test
 class TaxCalculatorTest {
 
     @Test
-    fun `taxpayer limits match fiscal year 2025-26 rules`() {
+    fun `taxpayer limits match assessment year 2026-27 rules`() {
         val limits = TaxDefaults.taxpayerTypes.associate { it.id to it.taxFreeLimit }
 
-        assertEquals(375_000L, limits["general"])
-        assertEquals(425_000L, limits["women"])
-        assertEquals(425_000L, limits["senior"])
-        assertEquals(500_000L, limits["disabled"])
-        assertEquals(525_000L, limits["freedomFighter"])
+        assertEquals(400_000L, limits["general"])
+        assertEquals(450_000L, limits["women"])
+        assertEquals(450_000L, limits["senior"])
+        assertEquals(525_000L, limits["disabled"])
+        assertEquals(550_000L, limits["freedomFighter"])
+    }
+
+    @Test
+    fun `disabled dependent allowance increases tax free limit by fifty thousand each`() {
+        val limit = calculateTaxFreeLimit(
+            baseTaxFreeLimit = 400_000L,
+            disabledDependentCount = 2
+        )
+
+        assertEquals(500_000L, limit)
     }
 
     @Test
@@ -43,6 +55,16 @@ class TaxCalculatorTest {
     }
 
     @Test
+    fun `investment rebate uses ten percent of actual eligible investment`() {
+        val rebate = calculateInvestmentRebate(
+            investments = listOf(InvestmentInputData("dps", "DPS", "900000")),
+            taxableIncome = 10_000_000L
+        )
+
+        assertEquals(90_000.0, rebate, 0.001)
+    }
+
+    @Test
     fun `investment rebate is capped by taxable income rule`() {
         val rebate = calculateInvestmentRebate(
             investments = listOf(InvestmentInputData("dps", "DPS", "900000")),
@@ -53,19 +75,19 @@ class TaxCalculatorTest {
     }
 
     @Test
-    fun `investment rebate is capped at ten lac`() {
+    fun `investment rebate is capped at seven point five lac`() {
         val rebate = calculateInvestmentRebate(
             investments = listOf(InvestmentInputData("dps", "DPS", "10000000")),
             taxableIncome = 50_000_000L
         )
 
-        assertEquals(1_000_000.0, rebate, 0.001)
+        assertEquals(750_000.0, rebate, 0.001)
     }
 
     @Test
     fun `minimum tax is preserved even with investment rebate`() {
         val result = calculateTax(
-            income = 400_000L,
+            income = 425_000L,
             taxFreeLimit = TaxDefaults.taxpayerTypes.first().taxFreeLimit,
             investmentRebate = 25_000.0
         )
@@ -78,7 +100,7 @@ class TaxCalculatorTest {
     @Test
     fun `new assessment can use one thousand minimum tax`() {
         val result = calculateTax(
-            income = 380_000L,
+            income = 405_000L,
             taxFreeLimit = TaxDefaults.taxpayerTypes.first().taxFreeLimit,
             investmentRebate = 0.0,
             minimumTax = TaxDefaults.newAssessmentMinimumTax
@@ -92,13 +114,38 @@ class TaxCalculatorTest {
     @Test
     fun `total tax is before rebate and final tax is after rebate`() {
         val result = calculateTax(
-            income = 1_075_000L,
+            income = 1_100_000L,
             taxFreeLimit = TaxDefaults.taxpayerTypes.first().taxFreeLimit,
             investmentRebate = 20_000.0
         )
 
         assertEquals(90_000.0, result.totalTax, 0.001)
         assertEquals(70_000.0, result.taxAfterRebate, 0.001)
+    }
+
+    @Test
+    fun `source and advance tax credits reduce remaining payable tax`() {
+        val adjustment = calculateTaxPaymentAdjustment(
+            taxLiability = 70_000.0,
+            adjustableSourceTax = 20_000L,
+            advanceTax = 10_000L
+        )
+
+        assertEquals(30_000.0, adjustment.totalTaxCredit, 0.001)
+        assertEquals(40_000.0, adjustment.remainingPayable, 0.001)
+        assertEquals(0.0, adjustment.excessPaid, 0.001)
+    }
+
+    @Test
+    fun `tax credits above liability are reported as excess paid`() {
+        val adjustment = calculateTaxPaymentAdjustment(
+            taxLiability = 50_000.0,
+            adjustableSourceTax = 40_000L,
+            advanceTax = 20_000L
+        )
+
+        assertEquals(0.0, adjustment.remainingPayable, 0.001)
+        assertEquals(10_000.0, adjustment.excessPaid, 0.001)
     }
 
     @Test
@@ -113,8 +160,8 @@ class TaxCalculatorTest {
         assertEquals(660_000L, breakdown.totalIncome)
         assertEquals(220_000L, breakdown.totalExemption)
         assertEquals(440_000L, breakdown.taxableIncome)
-        assertEquals(6_500.0, result.totalTax, 0.001)
-        assertEquals(6_500.0, result.taxAfterRebate, 0.001)
+        assertEquals(4_000.0, result.totalTax, 0.001)
+        assertEquals(5_000.0, result.taxAfterRebate, 0.001)
     }
 
     @Test
@@ -129,7 +176,7 @@ class TaxCalculatorTest {
         assertEquals(858_000L, breakdown.totalIncome)
         assertEquals(286_000L, breakdown.totalExemption)
         assertEquals(572_000L, breakdown.taxableIncome)
-        assertEquals(19_700.0, result.totalTax, 0.001)
-        assertEquals(19_700.0, result.taxAfterRebate, 0.001)
+        assertEquals(17_200.0, result.totalTax, 0.001)
+        assertEquals(17_200.0, result.taxAfterRebate, 0.001)
     }
 }

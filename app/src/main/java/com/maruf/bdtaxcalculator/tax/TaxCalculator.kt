@@ -1,6 +1,7 @@
 package com.maruf.bdtaxcalculator.tax
 
 import kotlin.math.roundToLong
+import java.util.Locale
 
 fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakdown {
     val conveyance = (grossSalary * 0.05).roundToLong()
@@ -34,6 +35,31 @@ fun calculateInvestmentRebate(investments: List<InvestmentInputData>, taxableInc
     val rebateByInvestment = totalInvestment * TaxDefaults.investmentRebateRate
     val rebateByIncome = taxableIncome * TaxDefaults.incomeBasedInvestmentRebateRate
     return minOf(rebateByInvestment, rebateByIncome, TaxDefaults.maxInvestmentRebate)
+}
+
+fun calculateTaxFreeLimit(baseTaxFreeLimit: Long, disabledDependentCount: Int): Long {
+    return baseTaxFreeLimit +
+        disabledDependentCount.coerceAtLeast(0).toLong() * TaxDefaults.disabledDependentAllowance
+}
+
+fun calculateTaxPaymentAdjustment(
+    taxLiability: Double,
+    adjustableSourceTax: Long,
+    advanceTax: Long
+): TaxPaymentAdjustment {
+    val normalizedLiability = taxLiability.coerceAtLeast(0.0)
+    val normalizedSourceTax = adjustableSourceTax.coerceAtLeast(0L).toDouble()
+    val normalizedAdvanceTax = advanceTax.coerceAtLeast(0L).toDouble()
+    val totalTaxCredit = normalizedSourceTax + normalizedAdvanceTax
+
+    return TaxPaymentAdjustment(
+        taxLiability = normalizedLiability,
+        adjustableSourceTax = normalizedSourceTax,
+        advanceTax = normalizedAdvanceTax,
+        totalTaxCredit = totalTaxCredit,
+        remainingPayable = (normalizedLiability - totalTaxCredit).coerceAtLeast(0.0),
+        excessPaid = (totalTaxCredit - normalizedLiability).coerceAtLeast(0.0)
+    )
 }
 
 fun calculateTax(
@@ -73,7 +99,7 @@ fun calculateTax(
         val slabTax = taxableInSlab * rate
 
         breakdown += TaxBreakdown(
-            label = "৳${formatBengaliNumber(currentStart)} থেকে পরবর্তী ৳${formatBengaliNumber(taxableInSlab)}",
+            label = formatTaxSlabLabel(currentStart, taxableInSlab),
             amount = taxableInSlab,
             rate = rate * 100,
             tax = slabTax
@@ -98,6 +124,14 @@ fun calculateTax(
         investmentRebate = investmentRebate,
         taxAfterRebate = taxAfterRebate
     )
+}
+
+private fun formatTaxSlabLabel(currentStart: Long, taxableInSlab: Long): String {
+    return if (Locale.getDefault().language == "bn") {
+        "৳${formatBengaliNumber(currentStart)} থেকে পরবর্তী ৳${formatBengaliNumber(taxableInSlab)}"
+    } else {
+        "BDT ${formatBengaliNumber(currentStart)} to next BDT ${formatBengaliNumber(taxableInSlab)}"
+    }
 }
 
 fun calculateTaxSummary(totalIncome: Long, taxAfterRebate: Double): TaxSummary {

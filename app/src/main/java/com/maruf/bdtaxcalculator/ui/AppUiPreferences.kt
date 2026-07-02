@@ -20,6 +20,8 @@ object AppUiPreferences {
     const val themePaletteOlive = "olive"
     const val themePaletteClassicGreen = "classic_green"
     const val themePaletteMidnightBlack = "midnight_black"
+    const val defaultThemeMode = themeLight
+    const val defaultThemePalette = themePaletteClassicGreen
 
     fun getLanguage(context: Context): String {
         return preferences(context).getString(keyLanguage, languageBangla)
@@ -33,24 +35,26 @@ object AppUiPreferences {
     }
 
     fun getThemeMode(context: Context): String {
-        return preferences(context).getString(keyThemeMode, themeSystem)
-            ?.takeIf { it == themeSystem || it == themeLight || it == themeDark }
-            ?: themeSystem
+        return when (preferences(context).getString(keyThemeMode, defaultThemeMode)) {
+            themeDark -> themeDark
+            themeLight -> themeLight
+            else -> defaultThemeMode
+        }
     }
 
     fun setThemeMode(context: Context, themeMode: String) {
-        if (themeMode != themeSystem && themeMode != themeLight && themeMode != themeDark) return
+        if (themeMode != themeLight && themeMode != themeDark) return
         preferences(context).edit { putString(keyThemeMode, themeMode) }
     }
 
     fun getThemePalette(context: Context): String {
-        return preferences(context).getString(keyThemePalette, themePaletteOlive)
+        return preferences(context).getString(keyThemePalette, defaultThemePalette)
             ?.takeIf {
                 it == AppThemePalette.Olive.id ||
                     it == AppThemePalette.ClassicGreen.id ||
                     it == AppThemePalette.MidnightBlack.id
             }
-            ?: themePaletteOlive
+            ?: defaultThemePalette
     }
 
     fun setThemePalette(context: Context, themePalette: String) {

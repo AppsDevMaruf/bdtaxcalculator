@@ -75,10 +75,11 @@ private val MidnightBlackDarkColorScheme = darkColorScheme(
 @Composable
 fun BDTaxCalculatorTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    themePalette: String = AppThemePalette.Olive.id,
+    themePalette: String = AppThemePalette.ClassicGreen.id,
     content: @Composable () -> Unit
 ) {
     val appThemePalette = AppThemePalette.fromId(themePalette)
+    val activeThemePalette = if (darkTheme) appThemePalette else AppThemePalette.ClassicGreen
     val colorScheme = when {
         darkTheme && appThemePalette == AppThemePalette.MidnightBlack -> MidnightBlackDarkColorScheme
         darkTheme && appThemePalette == AppThemePalette.ClassicGreen -> ClassicGreenDarkColorScheme
@@ -86,7 +87,7 @@ fun BDTaxCalculatorTheme(
         else -> LightColorScheme
     }
 
-    CompositionLocalProvider(LocalAppThemePalette provides appThemePalette) {
+    CompositionLocalProvider(LocalAppThemePalette provides activeThemePalette) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,

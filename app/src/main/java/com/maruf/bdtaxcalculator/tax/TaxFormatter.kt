@@ -4,14 +4,20 @@ import java.text.NumberFormat
 import java.util.Locale
 
 fun formatBengaliNumber(number: Long): String =
-    NumberFormat.getNumberInstance(Locale.US).format(number).toBengaliDigits()
+    NumberFormat.getNumberInstance(Locale.US)
+        .format(number)
+        .localizeDigits()
 
 fun formatBengaliPercent(value: Double): String {
     return "%.2f"
         .format(Locale.US, value)
         .trimEnd('0')
         .trimEnd('.')
-        .toBengaliDigits() + "%"
+        .localizeDigits() + "%"
+}
+
+private fun String.localizeDigits(): String {
+    return if (Locale.getDefault().language == "bn") toBengaliDigits() else this
 }
 
 private fun String.toBengaliDigits(): String {

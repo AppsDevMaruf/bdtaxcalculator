@@ -1,5 +1,6 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
+import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -38,7 +39,9 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -63,13 +66,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.notification.AppNotificationItem
 import com.maruf.bdtaxcalculator.notification.AppNotificationStore
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
@@ -100,11 +104,14 @@ import java.util.Locale
 fun HomeScreen(
     onOpenTaxCalculator: () -> Unit,
     onOpenAuditChecker: () -> Unit,
+    onOpenNbrTinCheck: () -> Unit,
+    onOpenTaxFaq: () -> Unit,
     onOpenHome: () -> Unit,
     onOpenProfile: () -> Unit,
     selectedDestination: AppDestination
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val notifications by AppNotificationStore.observe(context).collectAsState()
     var isNotificationSheetVisible by rememberSaveable { mutableStateOf(false) }
     val notificationSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -119,6 +126,10 @@ fun HomeScreen(
             HomeTopBar(
                 unreadCount = notifications.count { !it.isRead },
                 onNotificationsClick = {
+                    FirebaseTracker.logNotificationInboxOpened(
+                        totalCount = notifications.size,
+                        unreadCount = notifications.count { !it.isRead }
+                    )
                     AppNotificationStore.markAllRead(context)
                     isNotificationSheetVisible = true
                 }
@@ -141,26 +152,87 @@ fun HomeScreen(
             HomeServiceCard(
                 icon = Icons.Default.Assessment,
                 iconBg = HomeActionBlue,
-                title = "ট্যাক্স ক্যালকুলেটর",
-                description = "আপনার বর্তমান আয়, বেতন কাঠামো এবং ছাড়ের তথ্য অনুযায়ী আয়কর হিসাব করুন।",
-                buttonText = "এখন হিসাব করুন",
+                title = localizedText("ট্যাক্স ক্যালকুলেটর", "Tax Calculator"),
+                description = localizedText(
+                    "আপনার বর্তমান আয়, বেতন কাঠামো এবং ছাড়ের তথ্য অনুযায়ী আয়কর হিসাব করুন।",
+                    "Estimate income tax from your salary, bonus, exemptions, and investment rebate."
+                ),
+                buttonText = localizedText("এখন হিসাব করুন", "Calculate Now"),
                 buttonColor = HomeActionBlue,
                 accentBlock = HomeSoftGreen,
-                badge = "করবর্ষ ${TaxDefaults.taxYearLabel}",
-                onClick = onOpenTaxCalculator
+                badge = localizedText(
+                    "আয়বর্ষ ${TaxDefaults.incomeYearLabel} · অ্যাসেসমেন্ট ${TaxDefaults.assessmentYearLabel}",
+                    "Income Year 2025-26 · AY 2026-27"
+                ),
+                onClick = {
+                    FirebaseTracker.logHomeServiceOpened("tax_calculator")
+                    onOpenTaxCalculator()
+                }
             )
 
             HomeServiceCard(
                 icon = Icons.Default.Security,
                 iconBg = MaterialTheme.colorScheme.primary,
-                title = "অডিট চেক",
-                description = "আপনার TIN অডিটে আছে কি না তা সম্পূর্ণ অফলাইনে দ্রুত যাচাই করুন।",
-                buttonText = "স্ট্যাটাস দেখুন",
+                title = localizedText("অডিট চেক", "Audit Check"),
+                description = localizedText(
+                    "আপনার TIN অডিটে আছে কি না তা সম্পূর্ণ অফলাইনে দ্রুত যাচাই করুন।",
+                    "Check whether your TIN is in the NBR audit list, fully offline."
+                ),
+                buttonText = localizedText("স্ট্যাটাস দেখুন", "Check Status"),
                 buttonColor = MaterialTheme.colorScheme.primary,
                 accentBlock = HomeSoftGreen,
-                badge = "অফলাইন ও প্রাইভেট",
-                onClick = onOpenAuditChecker
+                badge = localizedText("অফলাইন ও প্রাইভেট", "Offline and Private"),
+                onClick = {
+                    FirebaseTracker.logHomeServiceOpened("audit_checker")
+                    onOpenAuditChecker()
+                }
             )
+
+            HomeServiceCard(
+                icon = Icons.Default.QuestionMark,
+                iconBg = MaterialTheme.colorScheme.primary,
+                title = localizedText("আয়কর সংক্রান্ত সচরাচর জিজ্ঞাসা", "Tax FAQ"),
+                description = localizedText(
+                    "NBR FAQ-এর আয়কর প্রশ্ন, রিটার্ন, e-TIN, e-Return ও রেয়াতের উত্তর এক জায়গায় দেখুন।",
+                    "Browse NBR-style answers about income tax, returns, e-TIN, e-Return, and rebate in one place."
+                ),
+                buttonText = localizedText("FAQ দেখুন", "Browse FAQ"),
+                buttonColor = MaterialTheme.colorScheme.primary,
+                accentBlock = HomeSoftGreen,
+                badge = localizedText("৮১টি প্রশ্ন", "81 questions"),
+                onClick = {
+                    FirebaseTracker.logHomeServiceOpened("tax_faq")
+                    onOpenTaxFaq()
+                }
+            )
+
+            ImportantGovtLinksCard(
+                onOpenLink = { link ->
+                    FirebaseTracker.logEvent(
+                        "important_govt_link_opened",
+                        Bundle().apply { putString("link", link.analyticsName) }
+                    )
+                    uriHandler.openUri(link.url)
+                }
+            )
+
+            /*HomeServiceCard(
+                icon = Icons.Default.AccountBalance,
+                iconBg = CalculatorSuccess,
+                title = localizedText("NBR TIN যাচাই", "NBR TIN Check"),
+                description = localizedText(
+                    "সরকারি NBR-Sonali Bank TAX portal খুলে TIN তথ্য যাচাই করুন।",
+                    "Open the official NBR-Sonali Bank TAX portal to verify TIN details."
+                ),
+                buttonText = localizedText("সরকারি পোর্টাল খুলুন", "Open Official Portal"),
+                buttonColor = CalculatorSuccess,
+                accentBlock = HomeSoftGreen,
+                badge = localizedText("ইন্টারনেট প্রয়োজন", "Internet Required"),
+                onClick = {
+                    FirebaseTracker.logHomeServiceOpened("nbr_tin_check")
+                    onOpenNbrTinCheck()
+                }
+            )*/
 
             //FilingStatusCard()
         }
@@ -183,7 +255,10 @@ fun HomeScreen(
         ) {
             NotificationInboxSheet(
                 notifications = notifications,
-                onClear = { AppNotificationStore.clear(context) }
+                onClear = {
+                    FirebaseTracker.logNotificationInboxCleared(notifications.size)
+                    AppNotificationStore.clear(context)
+                }
             )
         }
     }
@@ -228,7 +303,7 @@ private fun HomeTopBar(
                 ) {
                     Icon(
                         Icons.Default.NotificationsNone,
-                        contentDescription = "নোটিফিকেশন",
+                        contentDescription = localizedText("নোটিফিকেশন", "Notifications"),
                         tint = if (unreadCount > 0) CalculatorSuccess else HomeTextMuted,
                         modifier = Modifier.size(23.dp)
                     )
@@ -298,7 +373,7 @@ private fun NotificationInboxSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                    text = "নোটিফিকেশন",
+                    text = localizedText("নোটিফিকেশন", "Notifications"),
                     color = HomeTextPrimary,
                     fontSize = 24.sp,
                     lineHeight = 28.sp,
@@ -319,7 +394,7 @@ private fun NotificationInboxSheet(
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "পরিষ্কার",
+                        text = localizedText("পরিষ্কার", "Clear"),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -376,14 +451,17 @@ private fun EmptyNotificationState() {
                 )
             }
             Text(
-                text = "এখনো কোনো নোটিফিকেশন নেই",
+                text = localizedText("এখনো কোনো নোটিফিকেশন নেই", "No notifications yet"),
                 color = HomeTextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = TiroBanglaFontFamily
             )
             Text(
-                text = " নোটিফিকেশন এলে এই inbox-এ জমা হবে।",
+                text = localizedText(
+                    "নোটিফিকেশন এলে এই inbox-এ জমা হবে।",
+                    "New notifications will appear in this inbox."
+                ),
                 color = CalculatorMuted,
                 fontSize = 13.sp,
                 lineHeight = 20.sp,
@@ -480,7 +558,7 @@ private fun String.toBanglaDigits(): String {
 private fun WelcomeSection() {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            "স্বাগতম!",
+            localizedText("স্বাগতম!", "Welcome back!"),
             fontSize = 28.sp,
             lineHeight = 24.sp,
             fontWeight = FontWeight.ExtraBold,
@@ -488,7 +566,10 @@ private fun WelcomeSection() {
             fontFamily = TiroBanglaFontFamily
         )
         Text(
-            "২০২৫-২৬ করবর্ষের জন্য আপনার ট্যাক্স সারসংক্ষেপ প্রস্তুত আছে।",
+            localizedText(
+                "আয়বর্ষ ${TaxDefaults.incomeYearLabel} ও অ্যাসেসমেন্ট ${TaxDefaults.assessmentYearLabel}-এর জন্য আপনার ট্যাক্স সারসংক্ষেপ প্রস্তুত আছে।",
+                "Your tax overview for income year 2025-26 and assessment year 2026-27 is ready."
+            ),
             fontSize = 16.sp,
             lineHeight = 24.sp,
             color = HomeTextPrimary,
@@ -596,6 +677,111 @@ private fun HomeServiceCard(
     }
 }
 
+private data class GovtLink(
+    val banglaTitle: String,
+    val englishTitle: String,
+    val url: String,
+    val analyticsName: String
+)
+
+private val importantGovtLinks = listOf(
+    GovtLink("e-TDS", "e-TDS", "https://etds.gov.bd", "e_tds"),
+    GovtLink("e-TIN", "e-TIN", "https://secure.incometax.gov.bd/TINHome", "e_tin"),
+    GovtLink("a-Challan", "a-Challan", "https://ibas.finance.gov.bd", "a_challan"),
+    GovtLink("NBR Website", "NBR Website", "https://nbr.gov.bd", "nbr_website"),
+    GovtLink("Sonali Bank Payment", "Sonali Bank Payment", "https://nbr.sblesheba.com/IncomeTax/Payment", "sonali_bank_payment"),
+    GovtLink("e-Return", "e-Return", "https://etaxnbr.gov.bd", "e_return"),
+    GovtLink("Return Verify", "Return Verify", "https://etaxnbr.gov.bd", "return_verify")
+)
+
+@Composable
+private fun ImportantGovtLinksCard(
+    onOpenLink: (GovtLink) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, HomeBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            SectionTitle(
+                title = localizedText("গুরুত্বপূর্ণ সরকারি লিংক", "Important Govt. Links"),
+                subtitle = localizedText(
+                    "Official NBR ও related service দ্রুত খুলুন।",
+                    "Quickly open official NBR and related services."
+                )
+            )
+
+            importantGovtLinks.chunked(2).forEach { rowLinks ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowLinks.forEach { link ->
+                        GovtLinkChip(
+                            modifier = Modifier.weight(1f),
+                            text = localizedText(link.banglaTitle, link.englishTitle),
+                            onClick = { onOpenLink(link) }
+                        )
+                    }
+                    if (rowLinks.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GovtLinkChip(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.noRippleClickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 11.dp),
+            color = MaterialTheme.colorScheme.onPrimary,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
+            fontWeight = FontWeight.ExtraBold,
+            fontFamily = TiroBanglaFontFamily
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(
+    title: String,
+    subtitle: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(
+            title,
+            color = HomeTextPrimary,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
+            fontFamily = TiroBanglaFontFamily
+        )
+        Text(
+            subtitle,
+            color = HomeTextMuted,
+            fontSize = 12.sp,
+            lineHeight = 18.sp,
+            fontFamily = TiroBanglaFontFamily
+        )
+    }
+}
+
 @Composable
 private fun FilingStatusCard() {
     Card(
@@ -613,20 +799,20 @@ private fun FilingStatusCard() {
                 icon = Icons.AutoMirrored.Filled.ShowChart,
                 iconTint = MaterialTheme.colorScheme.primary,
                 iconBg = HomeSoftGreen,
-                label = "ফাইলিং স্ট্যাটাস",
-                value = "চলমান"
+                label = localizedText("ফাইলিং স্ট্যাটাস", "Filing Status"),
+                value = localizedText("চলমান", "In Progress")
             )
 
             HomeInfoRow(
                 icon = Icons.Default.CalendarMonth,
                 iconTint = HomeActionBlue,
                 iconBg = HomeSoftBlue,
-                label = "শেষ তারিখ",
-                value = "১৫ অক্টোবর, ২০২৪"
+                label = localizedText("শেষ তারিখ", "Deadline"),
+                value = localizedText("১৫ অক্টোবর, ২০২৪", "Oct 15, 2024")
             )
 
             Text(
-                "বিস্তারিত দেখুন →",
+                localizedText("বিস্তারিত দেখুন →", "View Details →"),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,

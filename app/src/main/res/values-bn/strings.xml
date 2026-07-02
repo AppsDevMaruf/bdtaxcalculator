@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">BD Tax Calculator</string>
+    <string name="default_notification_channel_id">taxpro_general_updates</string>
+    <string name="default_notification_channel_name">TaxPro আপডেট</string>
+    <string name="default_notification_channel_description">গুরুত্বপূর্ণ ট্যাক্স ক্যালকুলেটর ও অডিট চেকার আপডেট।</string>
+
+    <!-- Screen Titles -->
+    <string name="title_tax_calculator">আয়কর ক্যালকুলেটর</string>
+    <string name="title_year">২০২৬-২৭</string>
+
+    <!-- Taxpayer Types -->
+    <string name="taxpayer_general">সাধারণ করদাতা</string>
+    <string name="taxpayer_women">মহিলা করদাতা</string>
+    <string name="taxpayer_senior">সিনিয়র সিটিজেন (৬৫+)</string>
+    <string name="taxpayer_disabled">প্রতিবন্ধী ব্যক্তি</string>
+    <string name="taxpayer_freedom_fighter">মুক্তিযোদ্ধা</string>
+
+    <!-- Labels -->
+    <string name="label_taxpayer_type">করদাতার ধরন</string>
+    <string name="label_taxable_income">করযোগ্য আয়</string>
+    <string name="label_income_amount">আয়ের পরিমাণ (টাকা)</string>
+    <string name="label_tax_free_limit">করমুক্ত সীমা</string>
+    <string name="label_total_tax">মোট আয়কর</string>
+    <string name="label_tax_breakdown">কর হিসাবের বিস্তারিত</string>
+    <string name="label_tax_slabs">কর স্ল্যাব অ্যাসেসমেন্ট ২০২৬-২৭</string>
+
+    <!-- Messages -->
+    <string name="msg_tax_free">আপনার আয় করমুক্ত সীমার মধ্যে</string>
+    <string name="msg_no_tax">আপনাকে কোন আয়কর দিতে হবে না।</string>
+    <string name="msg_minimum_tax">ন্যূনতম কর: ৫,০০০ টাকা প্রযোজ্য</string>
+
+    <!-- Info Messages -->
+    <string name="info_title">গুরুত্বপূর্ণ তথ্য</string>
+    <string name="info_content" formatted="false">• আয়বর্ষ: ২০২৫-২৬; অ্যাসেসমেন্ট ইয়ার: ২০২৬-২৭\n• করমুক্ত সীমা অর্থ আইন ২০২৬ অনুযায়ী\n• যোগ্য ক্ষেত্রে প্রতিবন্ধী সন্তান/পোষ্য প্রতি ৫০,০০০ টাকা অতিরিক্ত করমুক্ত সীমা\n• রিবেট: যোগ্য বিনিয়োগের ১০%, করযোগ্য আয়ের ৩%, অথবা ৭৫০,০০০ টাকার মধ্যে কমটি\n• সকল এলাকার ন্যূনতম কর: ৫,০০০ টাকা; নতুন করদাতা: ১,০০০ টাকা\n• প্রকৃত কর জমার জন্য NBR এর সাথে যোগাযোগ করুন</string>
+
+    <!-- Footer -->
+    <string name="footer_text">বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_info">তথ্য</string>
+    <string name="cd_selected">নির্বাচিত</string>
+    <string name="cd_person_icon">ব্যক্তি আইকন</string>
+    <string name="cd_balance_icon">ব্যালেন্স আইকন</string>
+    <string name="cd_receipt_icon">রসিদ আইকন</string>
+    <string name="cd_assessment_icon">মূল্যায়ন আইকন</string>
+</resources>

@@ -23,6 +23,15 @@ data class TaxResult(
     val taxAfterRebate: Double = 0.0
 )
 
+data class TaxPaymentAdjustment(
+    val taxLiability: Double,
+    val adjustableSourceTax: Double,
+    val advanceTax: Double,
+    val totalTaxCredit: Double,
+    val remainingPayable: Double,
+    val excessPaid: Double
+)
+
 data class InvestmentInputData(
     val type: String,
     val title: String,

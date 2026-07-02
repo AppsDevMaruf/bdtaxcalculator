@@ -1,46 +1,46 @@
 <resources>
     <string name="app_name">BD Tax Calculator</string>
-    <string name="default_notification_channel_id">taxpro_general_updates</string>
+    <string name="default_notification_channel_id">bd_tax_calculator_general_updates</string>
     <string name="default_notification_channel_name">TaxPro Updates</string>
     <string name="default_notification_channel_description">Important tax calculator and audit checker updates.</string>
 
     <!-- Screen Titles -->
-    <string name="title_tax_calculator">আয়কর ক্যালকুলেটর</string>
-    <string name="title_year">২০২৫-২৬</string>
+    <string name="title_tax_calculator">Income Tax Calculator</string>
+    <string name="title_year">2026–27</string>
 
     <!-- Taxpayer Types -->
-    <string name="taxpayer_general">সাধারণ করদাতা</string>
-    <string name="taxpayer_women">মহিলা করদাতা</string>
-    <string name="taxpayer_senior">সিনিয়র সিটিজেন (৬৫+)</string>
-    <string name="taxpayer_disabled">প্রতিবন্ধী ব্যক্তি</string>
-    <string name="taxpayer_freedom_fighter">মুক্তিযোদ্ধা</string>
+    <string name="taxpayer_general">General taxpayer</string>
+    <string name="taxpayer_women">Female taxpayer</string>
+    <string name="taxpayer_senior">Senior citizen (65+)</string>
+    <string name="taxpayer_disabled">Person with disability</string>
+    <string name="taxpayer_freedom_fighter">Freedom fighter</string>
 
     <!-- Labels -->
-    <string name="label_taxpayer_type">করদাতার ধরন</string>
-    <string name="label_taxable_income">করযোগ্য আয়</string>
-    <string name="label_income_amount">আয়ের পরিমাণ (টাকা)</string>
-    <string name="label_tax_free_limit">করমুক্ত সীমা</string>
-    <string name="label_total_tax">মোট আয়কর</string>
-    <string name="label_tax_breakdown">কর হিসাবের বিস্তারিত</string>
-    <string name="label_tax_slabs">কর স্ল্যাব ২০২৫-২৬</string>
+    <string name="label_taxpayer_type">Taxpayer type</string>
+    <string name="label_taxable_income">Taxable income</string>
+    <string name="label_income_amount">Income amount (BDT)</string>
+    <string name="label_tax_free_limit">Tax-free limit</string>
+    <string name="label_total_tax">Total income tax</string>
+    <string name="label_tax_breakdown">Tax breakdown</string>
+    <string name="label_tax_slabs">Tax slabs AY 2026–27</string>
 
     <!-- Messages -->
-    <string name="msg_tax_free">আপনার আয় করমুক্ত সীমার মধ্যে</string>
-    <string name="msg_no_tax">আপনাকে কোন আয়কর দিতে হবে না।</string>
-    <string name="msg_minimum_tax">ন্যূনতম কর: ৫,০০০ টাকা প্রযোজ্য</string>
+    <string name="msg_tax_free">Your income is within the tax-free limit</string>
+    <string name="msg_no_tax">You do not need to pay income tax.</string>
+    <string name="msg_minimum_tax">Minimum tax: BDT 5,000 applies</string>
 
     <!-- Info Messages -->
-    <string name="info_title">গুরুত্বপূর্ণ তথ্য</string>
-    <string name="info_content">• এই ক্যালকুলেটর ২০২৫-২৬ অর্থবছরের কর স্ল্যাব অনুযায়ী তৈরি\n• ন্যূনতম কর: ৫,০০০ টাকা (করমুক্ত সীমা অতিক্রম করলে)\n• সর্বোচ্চ কর হার: ৩০%\n• প্রকৃত কর জমার জন্য NBR এর সাথে যোগাযোগ করুন</string>
+    <string name="info_title">Important information</string>
+    <string name="info_content" formatted="false">• Income year: 2025–26; assessment year: 2026–27\n• Tax-free limits follow the Finance Act 2026\n• Add BDT 50,000 for each disabled child/dependent when eligible\n• Rebate is the lower of 10% eligible investment, 3% taxable income, or BDT 750,000\n• Minimum tax for all locations: BDT 5,000; new taxpayer: BDT 1,000\n• Contact NBR for actual tax submission</string>
 
     <!-- Footer -->
-    <string name="footer_text">বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী</string>
+    <string name="footer_text">Based on Bangladesh National Board of Revenue (NBR) rules</string>
 
     <!-- Content Descriptions -->
-    <string name="cd_info">তথ্য</string>
-    <string name="cd_selected">নির্বাচিত</string>
-    <string name="cd_person_icon">ব্যক্তি আইকন</string>
-    <string name="cd_balance_icon">ব্যালেন্স আইকন</string>
-    <string name="cd_receipt_icon">রসিদ আইকন</string>
-    <string name="cd_assessment_icon">মূল্যায়ন আইকন</string>
+    <string name="cd_info">Information</string>
+    <string name="cd_selected">Selected</string>
+    <string name="cd_person_icon">Person icon</string>
+    <string name="cd_balance_icon">Balance icon</string>
+    <string name="cd_receipt_icon">Receipt icon</string>
+    <string name="cd_assessment_icon">Assessment icon</string>
 </resources>

@@ -9,6 +9,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,6 +21,8 @@ sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object TaxCalculator : Screen("tax_calculator")
     data object AuditChecker : Screen("audit_checker")
+    data object NbrTinCheck : Screen("nbr_tin_check")
+    data object TaxFaq : Screen("tax_faq")
     data object Profile : Screen("profile")
 }
 
@@ -27,6 +31,16 @@ enum class AppDestination {
     TaxCalculator,
     AuditChecker,
     Profile
+}
+
+private fun NavHostController.navigateToBottomTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
 }
 
 @Composable
@@ -50,6 +64,8 @@ fun AppRootScreen(
         val screenName = when (currentRoute) {
             Screen.TaxCalculator.route -> "tax_calculator"
             Screen.AuditChecker.route -> "audit_checker"
+            Screen.NbrTinCheck.route -> "nbr_tin_check"
+            Screen.TaxFaq.route -> "tax_faq"
             Screen.Profile.route -> "settings"
             else -> "home"
         }
@@ -69,24 +85,22 @@ fun AppRootScreen(
                     },
                     onOpenHome = {
                         if (currentRoute != Screen.Home.route) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Home.route) { inclusive = true }
-                            }
+                            navController.navigateToBottomTab(Screen.Home.route)
                         }
                     },
                     onOpenTaxCalculator = {
                         if (currentRoute != Screen.TaxCalculator.route) {
-                            navController.navigate(Screen.TaxCalculator.route)
+                            navController.navigateToBottomTab(Screen.TaxCalculator.route)
                         }
                     },
                     onOpenAuditChecker = {
                         if (currentRoute != Screen.AuditChecker.route) {
-                            navController.navigate(Screen.AuditChecker.route)
+                            navController.navigateToBottomTab(Screen.AuditChecker.route)
                         }
                     },
                     onOpenProfile = {
                         if (currentRoute != Screen.Profile.route) {
-                            navController.navigate(Screen.Profile.route)
+                            navController.navigateToBottomTab(Screen.Profile.route)
                         }
                     }
                 )
@@ -101,10 +115,12 @@ fun AppRootScreen(
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
-                    onOpenTaxCalculator = { navController.navigate(Screen.TaxCalculator.route) },
-                    onOpenAuditChecker = { navController.navigate(Screen.AuditChecker.route) },
+                    onOpenTaxCalculator = { navController.navigateToBottomTab(Screen.TaxCalculator.route) },
+                    onOpenAuditChecker = { navController.navigateToBottomTab(Screen.AuditChecker.route) },
+                    onOpenNbrTinCheck = { navController.navigate(Screen.NbrTinCheck.route) },
+                    onOpenTaxFaq = { navController.navigate(Screen.TaxFaq.route) },
                     onOpenHome = { /* Already here */ },
-                    onOpenProfile = { navController.navigate(Screen.Profile.route) },
+                    onOpenProfile = { navController.navigateToBottomTab(Screen.Profile.route) },
                     selectedDestination = AppDestination.Home
                 )
             }
@@ -118,6 +134,16 @@ fun AppRootScreen(
             composable(Screen.AuditChecker.route) {
                 AuditCheckerScreen(
                     onRequestInAppReview = onRequestInAppReview
+                )
+            }
+
+            composable(Screen.NbrTinCheck.route) {
+                NbrTinCheckScreen()
+            }
+
+            composable(Screen.TaxFaq.route) {
+                TaxFaqScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

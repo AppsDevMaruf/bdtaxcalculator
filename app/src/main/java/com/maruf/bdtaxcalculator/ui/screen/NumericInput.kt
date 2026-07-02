@@ -1,6 +1,7 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
 internal const val MaxMoneyInputLength = 15
+internal const val MaxDisabledDependentCount = 20
 internal const val TinInputLength = 12
 
 internal fun normalizeAuditTinInput(input: String): String {

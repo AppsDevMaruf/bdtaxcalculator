@@ -7,14 +7,19 @@ plugins {
 }
 android {
     namespace = "com.maruf.bdtaxcalculator"
-    compileSdk = 36
+    compileSdk = 37
+
+    androidResources {
+        generateLocaleConfig = true
+        localeFilters += listOf("en", "bn")
+    }
 
     defaultConfig {
         applicationId = "com.maruf.bdtaxcalculator"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.6"
+        versionCode = 13
+        versionName = "1.1.13"
     }
 
     buildTypes {
@@ -48,6 +53,7 @@ kotlin {
 dependencies {
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

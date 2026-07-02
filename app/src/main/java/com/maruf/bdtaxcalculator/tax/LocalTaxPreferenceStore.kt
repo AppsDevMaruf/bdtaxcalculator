@@ -33,14 +33,6 @@ object LocalTaxPreferenceStore {
         preferences(context).edit().putString(keyAssessmentType, assessmentType).apply()
     }
 
-    fun getMinimumTax(context: Context): Double {
-        return if (getAssessmentType(context) == assessmentNew) {
-            TaxDefaults.newAssessmentMinimumTax
-        } else {
-            TaxDefaults.minimumTax
-        }
-    }
-
     fun clear(context: Context) {
         preferences(context).edit().clear().apply()
     }

@@ -35,11 +35,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
@@ -72,8 +72,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.tax.LocalTaxPreferenceStore
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
+import com.maruf.bdtaxcalculator.tax.TaxpayerType
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.ui.AppUiPreferences
 import com.maruf.bdtaxcalculator.ui.localizedText
@@ -95,6 +97,22 @@ import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextPrimary
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import androidx.core.net.toUri
+import java.util.Locale
+
+@Composable
+private fun TaxpayerType.localizedLabel(): String {
+    return when (id) {
+        "general" -> localizedText("সাধারণ করদাতা", "General taxpayer")
+        "women" -> localizedText("মহিলা করদাতা", "Female taxpayer")
+        "senior" -> localizedText("সিনিয়র সিটিজেন (৬৫+)", "Senior citizen (65+)")
+        "disabled" -> localizedText("তৃতীয় লিঙ্গ / প্রতিবন্ধী", "Third gender / disabled")
+        "freedomFighter" -> localizedText(
+            "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা",
+            "War-wounded freedom fighter / injured July fighter"
+        )
+        else -> label
+    }
+}
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,9 +128,6 @@ fun ProfileScreen(
     val context = LocalContext.current
     var selectedTaxpayerType by remember {
         mutableStateOf(LocalTaxPreferenceStore.getDefaultTaxpayerType(context))
-    }
-    var selectedAssessmentType by remember {
-        mutableStateOf(LocalTaxPreferenceStore.getAssessmentType(context))
     }
     var showLanguageSheet by remember { mutableStateOf(false) }
     val languageSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -199,8 +214,8 @@ fun ProfileScreen(
         SettingsSection(title = localizedText("লোকাল ট্যাক্স সেটআপ", "Local tax setup")) {
             Text(
                 localizedText(
-                    "নতুন হিসাব শুরু হলে এই সেটিংস ডিফল্ট হিসেবে ব্যবহার হবে।",
-                    "These settings are used as defaults for new calculations."
+                    "নতুন হিসাব শুরু হলে করদাতার শ্রেণী ডিফল্ট হিসেবে ব্যবহার হবে।",
+                    "This taxpayer category is used as the default for new calculations."
                 ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 fontSize = 13.sp,
@@ -212,10 +227,10 @@ fun ProfileScreen(
             TaxDefaults.taxpayerTypes.forEach { type ->
                 PreferenceChoiceRow(
                     icon = type.icon ?: Icons.Default.Person,
-                    title = type.label,
+                    title = type.localizedLabel(),
                     subtitle = localizedText(
                         "করমুক্ত সীমা: ৳ ${formatBengaliNumber(type.taxFreeLimit)}",
-                        "Tax-free limit: BDT ${type.taxFreeLimit}"
+                        "Tax-free limit: BDT ${formatBengaliNumber(type.taxFreeLimit)}"
                     ),
                     selected = selectedTaxpayerType == type.id,
                     onClick = {
@@ -228,60 +243,37 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.size(18.dp))
 
-        SettingsSection(title = localizedText("অ্যাসেসমেন্ট ধরন", "Assessment type")) {
-            PreferenceChoiceRow(
-                icon = Icons.Default.CheckCircle,
-                title = localizedText("সাধারণ অ্যাসেসমেন্ট", "Regular assessment"),
-                subtitle = localizedText(
-                    "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())}",
-                    "Minimum tax: BDT ${TaxDefaults.minimumTax.toLong()}"
-                ),
-                selected = selectedAssessmentType == LocalTaxPreferenceStore.assessmentRegular,
-                onClick = {
-                    selectedAssessmentType = LocalTaxPreferenceStore.assessmentRegular
-                    LocalTaxPreferenceStore.setAssessmentType(context, LocalTaxPreferenceStore.assessmentRegular)
-                }
-            )
-            PreferenceChoiceRow(
-                icon = Icons.Default.Calculate,
-                title = localizedText("নতুন অ্যাসেসমেন্ট", "New assessment"),
-                subtitle = localizedText(
-                    "ন্যূনতম কর: ৳ ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())}",
-                    "Minimum tax: BDT ${TaxDefaults.newAssessmentMinimumTax.toLong()}"
-                ),
-                selected = selectedAssessmentType == LocalTaxPreferenceStore.assessmentNew,
-                onClick = {
-                    selectedAssessmentType = LocalTaxPreferenceStore.assessmentNew
-                    LocalTaxPreferenceStore.setAssessmentType(context, LocalTaxPreferenceStore.assessmentNew)
-                }
-            )
-        }
-
-        Spacer(modifier = Modifier.size(18.dp))
-
         SettingsSection(title = localizedText("প্রাইভেসি ও ডেটা", "Privacy & data")) {
             InfoRow(
                 icon = Icons.Default.Lock,
-                title = localizedText("অফলাইন ও প্রাইভেট", "Offline and private"),
+                title = localizedText("লোকাল ও প্রাইভেট", "Local and private"),
                 subtitle = localizedText(
-                    "কোনো লগইন, সার্ভার, ডেটাবেস বা ইনপুট সংরক্ষণ নেই।",
-                    "No login, server, database, or saved tax input."
+                    "কোনো লগইন, নিজস্ব সার্ভার, ডেটাবেস বা ইনপুট সংরক্ষণ নেই।",
+                    "No login, own server, database, or saved tax input."
+                )
+            )
+            InfoRow(
+                icon = Icons.Default.Language,
+                title = localizedText("সরকারি NBR পোর্টাল", "Official NBR portal"),
+                subtitle = localizedText(
+                    "TIN যাচাইয়ের পেজ সরকারি ওয়েবসাইট থেকে লোড হয়; অ্যাপ তথ্য সংরক্ষণ করে না।",
+                    "TIN check loads the official government website; the app does not store submitted data."
                 )
             )
             InfoRow(
                 icon = Icons.Default.Info,
                 title = localizedText("রুলস ডেটা", "Rules data"),
                 subtitle = localizedText(
-                    "করবর্ষ ${TaxDefaults.taxYearLabel}; অডিট ডেটা অ্যাপের static JSON থেকে লোড হয়।",
-                    "Tax year ${TaxDefaults.taxYearLabel}; audit data loads from static JSON inside the app."
+                    "আয়বর্ষ ${TaxDefaults.incomeYearLabel}; অ্যাসেসমেন্ট ইয়ার ${TaxDefaults.assessmentYearLabel}; অডিট ডেটা অ্যাপের static JSON থেকে লোড হয়।",
+                    "Income year 2025-26; assessment year 2026-27; audit data loads from static JSON inside the app."
                 )
             )
             InfoRow(
                 icon = Icons.Default.Settings,
                 title = localizedText("শুধু লোকাল পছন্দ", "Local preferences only"),
                 subtitle = localizedText(
-                    "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট ধরন শুধু এই ডিভাইসে থাকে।",
-                    "Default taxpayer and assessment choices stay only on this device."
+                    "ডিফল্ট করদাতা ও calculator screen-এর tax rule পছন্দ শুধু এই ডিভাইসে থাকে।",
+                    "Default taxpayer and calculator tax-rule choices stay only on this device."
                 )
             )
         }
@@ -296,13 +288,43 @@ fun ProfileScreen(
                     "Tax Calculator BD অন্যদের জানাতে শেয়ার করুন।",
                     "Share Tax Calculator BD with others."
                 ),
-                onClick = { context.shareApp() }
+                onClick = {
+                    FirebaseTracker.logSettingsAction("share_app")
+                    context.shareApp()
+                }
+            )
+            ActionRow(
+                icon = Icons.Default.Language,
+                title = localizedText("ফেসবুক পেজ", "Facebook Page"),
+                subtitle = localizedText(
+                    "BD Tax Calculator পেজ ফলো করুন।",
+                    "Follow the BD Tax Calculator page."
+                ),
+                onClick = {
+                    FirebaseTracker.logSettingsAction("open_facebook_page")
+                    context.openExternalUrl(FacebookPageUrl)
+                }
+            )
+            ActionRow(
+                icon = Icons.Default.Person,
+                title = localizedText("ইউজার কমিউনিটি", "User Community"),
+                subtitle = localizedText(
+                    "BD Tax Calculator User Community গ্রুপে যুক্ত হন।",
+                    "Join the BD Tax Calculator User Community group."
+                ),
+                onClick = {
+                    FirebaseTracker.logSettingsAction("open_facebook_group")
+                    context.openExternalUrl(FacebookGroupUrl)
+                }
             )
             ActionRow(
                 icon = Icons.Default.Star,
                 title = localizedText("রেট দিন", "Rate app"),
                 subtitle = localizedText("Play Store-এ রেটিং দিন।", "Rate us on the Play Store."),
-                onClick = onRateApp
+                onClick = {
+                    FirebaseTracker.logSettingsAction("rate_app")
+                    onRateApp()
+                }
             )
             ActionRow(
                 icon = Icons.Default.Email,
@@ -311,19 +333,22 @@ fun ProfileScreen(
                     "ভুল হিসাব বা ডেটা সমস্যা জানাতে ইমেইল করুন।",
                     "Email us about calculation or data issues."
                 ),
-                onClick = { context.sendFeedbackEmail() }
+                onClick = {
+                    FirebaseTracker.logSettingsAction("report_issue")
+                    context.sendFeedbackEmail()
+                }
             )
             ActionRow(
                 icon = Icons.Default.Delete,
                 title = localizedText("লোকাল সেটিংস রিসেট", "Reset local settings"),
                 subtitle = localizedText(
-                    "ডিফল্ট করদাতা ও অ্যাসেসমেন্ট সেটিংস পরিষ্কার করুন।",
-                    "Clear default taxpayer and assessment settings."
+                    "ডিফল্ট করদাতা ও calculator tax rule পছন্দ পরিষ্কার করুন।",
+                    "Clear default taxpayer and calculator tax-rule choices."
                 ),
                 onClick = {
+                    FirebaseTracker.logSettingsAction("reset_local_settings")
                     LocalTaxPreferenceStore.clear(context)
                     selectedTaxpayerType = LocalTaxPreferenceStore.getDefaultTaxpayerType(context)
-                    selectedAssessmentType = LocalTaxPreferenceStore.getAssessmentType(context)
                 }
             )
         }
@@ -559,7 +584,7 @@ private fun LanguageBottomSheet(
             )
             LanguageOptionRow(
                 flag = "\uD83C\uDDE7\uD83C\uDDE9",
-                title = "বাংলা",
+                title = localizedText("বাংলা", "Bangla"),
                 selected = language == AppUiPreferences.languageBangla,
                 onClick = { onLanguageChange(AppUiPreferences.languageBangla) }
             )
@@ -1019,24 +1044,46 @@ private fun SettingIcon(icon: ImageVector, selected: Boolean) {
 
 private fun Context.getAppVersionName(): String {
     return runCatching {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.6"
-    }.getOrDefault("1.0.6")
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.8"
+    }.getOrDefault("1.0.8")
+}
+
+private const val FacebookPageUrl =
+    "https://www.facebook.com/bdtaxcalculator"
+
+private const val FacebookGroupUrl =
+    "https://www.facebook.com/groups/1682838446173061"
+
+private fun Context.openExternalUrl(url: String) {
+    runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+    }.onFailure(FirebaseTracker::recordNonFatal)
 }
 
 private fun Context.shareApp() {
+    val shareText = if (Locale.getDefault().language == "bn") {
+        "Tax Calculator BD ব্যবহার করে অফলাইনে আয়কর হিসাব ও TIN অডিট চেক করুন।"
+    } else {
+        "Use Tax Calculator BD to calculate income tax and check TIN audit status offline."
+    }
+    val chooserTitle = if (Locale.getDefault().language == "bn") {
+        "Tax Calculator BD অ্যাপটি শেয়ার করুন"
+    } else {
+        "Share Tax Calculator BD"
+    }
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, "Tax Calculator BD ব্যবহার করে অফলাইনে আয়কর হিসাব ও TIN অডিট চেক করুন।"+
-                "https://play.google.com/store/apps/details?id=$packageName".toUri())
+        putExtra(Intent.EXTRA_TEXT, "$shareText https://play.google.com/store/apps/details?id=$packageName")
     }
-    startActivity(Intent.createChooser(shareIntent, "Tax Calculator BD অ্যাপটি শেয়ার করুন"))
+    startActivity(Intent.createChooser(shareIntent, chooserTitle))
 }
 
 private fun Context.sendFeedbackEmail() {
+    val chooserTitle = if (Locale.getDefault().language == "bn") "ইমেইল পাঠান" else "Send email"
     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
         data = "mailto:".toUri()
         putExtra(Intent.EXTRA_EMAIL, arrayOf("contact.marufalam@gmail.com"))
         putExtra(Intent.EXTRA_SUBJECT, "Tax Calculator BD feedback")
     }
-    startActivity(Intent.createChooser(emailIntent, "ইমেইল পাঠান"))
+    startActivity(Intent.createChooser(emailIntent, chooserTitle))
 }

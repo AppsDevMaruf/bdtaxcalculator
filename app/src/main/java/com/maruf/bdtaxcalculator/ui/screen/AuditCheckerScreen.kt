@@ -56,6 +56,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -67,7 +68,9 @@ import com.maruf.bdtaxcalculator.audit.AuditDataset
 import com.maruf.bdtaxcalculator.audit.AuditLookupResult
 import com.maruf.bdtaxcalculator.audit.AuditRepository
 import com.maruf.bdtaxcalculator.audit.maskTin
+import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
+import com.maruf.bdtaxcalculator.ui.localizedText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorDanger
@@ -95,12 +98,13 @@ fun AuditCheckerScreen(
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val uriHandler = LocalUriHandler.current
     val hideKeyboardOnScrollConnection = rememberKeyboardDismissOnScrollConnection()
 
     var tinInput by rememberSaveable { mutableStateOf("") }
     var dataset by remember { mutableStateOf<AuditDataset?>(null) }
-    var lookupResult by remember { mutableStateOf<AuditLookupResult?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
+    val lookupResult = if (hasSearched) dataset?.lookupTin(tinInput) else null
 
     LaunchedEffect(Unit) {
         dataset = withContext(Dispatchers.IO) {
@@ -114,7 +118,6 @@ fun AuditCheckerScreen(
                 onBack = onBack,
                 onReset = {
                     tinInput = ""
-                    lookupResult = null
                     hasSearched = false
                 }
             )
@@ -141,14 +144,13 @@ fun AuditCheckerScreen(
                     canSearch = tinInput.length == TinInputLength && dataset != null,
                     onTinChange = { value ->
                         tinInput = normalizeAuditTinInput(value)
-                        lookupResult = null
                         hasSearched = false
                     },
                     onSearch = {
-                        lookupResult = dataset?.lookupTin(tinInput)
                         hasSearched = true
                         focusManager.clearFocus()
                         keyboardController?.hide()
+                        FirebaseTracker.logEvent("audit_search_completed")
                         onRequestInAppReview("audit_search_completed")
                     }
                 )
@@ -165,6 +167,13 @@ fun AuditCheckerScreen(
                 if (hasSearched) {
                     AuditLookupResultCard(result = lookupResult, searchedTin = tinInput)
                 }
+
+                AuditGuidanceCard(
+                    hasSearched = hasSearched,
+                    result = lookupResult,
+                    onOpenNbr = { uriHandler.openUri(NbrWebsiteUrl) },
+                    onOpenEReturn = { uriHandler.openUri(EReturnWebsiteUrl) }
+                )
 
                 AuditDatasetSummary(dataset = dataset)
             }
@@ -193,12 +202,12 @@ private fun AuditTopBar(
             if (onBack != null) {
                 HeaderIconButton(
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    label = "ফিরুন",
+                    label = localizedText("ফিরুন", "Back"),
                     onClick = onBack
                 )
             }
             Text(
-                "অডিট চেক",
+                localizedText("অডিট চেক", "Audit Check"),
                 fontSize = 16.sp,
                 lineHeight = 19.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -209,7 +218,7 @@ private fun AuditTopBar(
 
         HeaderIconButton(
             icon = Icons.Default.Refresh,
-            label = "রিসেট",
+            label = localizedText("রিসেট", "Reset"),
             onClick = onReset
         )
     }
@@ -253,14 +262,17 @@ private fun AuditSearchCard(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    "TIN Audit Search",
+                    localizedText("TIN Audit Search", "TIN Audit Search"),
                     color = CalculatorInk,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    "১২ সংখ্যার TIN লিখুন। সার্চ সম্পূর্ণ অফলাইন এবং ডেটা অ্যাপের বাইরে কোথাও যায় না। Assessment year 23-24",
+                    localizedText(
+                        "১২ সংখ্যার TIN লিখুন। সার্চ সম্পূর্ণ অফলাইন এবং ডেটা অ্যাপের বাইরে কোথাও যায় না। Assessment year 23-24",
+                        "Enter your 12-digit TIN. Search runs fully offline and no data leaves the app. Assessment year 2023-24"
+                    ),
                     color = CalculatorMuted,
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
@@ -280,14 +292,19 @@ private fun AuditSearchCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "${tinInput.length}/12 digits",
+                    localizedText("${formatBengaliNumber(tinInput.length.toLong())}/১২ ডিজিট", "${tinInput.length}/12 digits"),
                     color = CalculatorMuted,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = TiroBanglaFontFamily
                 )
                 AuditStatusPill(
-                    text = dataset?.let { "Ready · ${formatBengaliNumber(it.totalRecords.toLong())} records" } ?: "লোড হচ্ছে...",
+                    text = dataset?.let {
+                        localizedText(
+                            "প্রস্তুত · ${formatBengaliNumber(it.totalRecords.toLong())} রেকর্ড",
+                            "Ready · ${formatBengaliNumber(it.totalRecords.toLong())} records"
+                        )
+                    } ?: localizedText("লোড হচ্ছে...", "Loading..."),
                     background = CalculatorSuccess.copy(alpha = 0.1f),
                     color = CalculatorSuccess
                 )
@@ -308,7 +325,7 @@ private fun AuditSearchCard(
                 )
             ) {
                 Text(
-                    "Check Audit Status",
+                    localizedText("অডিট স্ট্যাটাস দেখুন", "Check Audit Status"),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontFamily = TiroBanglaFontFamily
@@ -352,6 +369,7 @@ private fun AuditTinInput(
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = CalculatorInk,
+                    fontFamily = TiroBanglaFontFamily
                 ),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -370,7 +388,7 @@ private fun AuditTinInput(
                 decorationBox = { innerTextField ->
                     if (value.isEmpty()) {
                         Text(
-                            "১২-সংখ্যার TIN লিখুন",
+                            localizedText("১২-সংখ্যার TIN লিখুন", "Enter 12-digit TIN"),
                             color = CalculatorMuted.copy(alpha = 0.72f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
@@ -385,10 +403,133 @@ private fun AuditTinInput(
 }
 
 @Composable
+private fun AuditGuidanceCard(
+    hasSearched: Boolean,
+    result: AuditLookupResult?,
+    onOpenNbr: () -> Unit,
+    onOpenEReturn: () -> Unit
+) {
+    val resultGuidance = when {
+        !hasSearched -> localizedText(
+            "TIN সার্চ করলে এখানে আপনার পরবর্তী করণীয় দেখাবে।",
+            "Search a TIN to see what to do next."
+        )
+
+        result?.isSelected == true -> localizedText(
+            "নির্বাচিত হলে রিটার্ন acknowledgement, আয়-ব্যয়ের কাগজ এবং বিনিয়োগ প্রমাণ প্রস্তুত রাখুন; প্রয়োজনে সংশ্লিষ্ট সার্কেল অফিসে যোগাযোগ করুন।",
+            "If selected, keep your return acknowledgement, income-expense papers, and investment proof ready; contact the relevant circle office if needed."
+        )
+
+        else -> localizedText(
+            "রেকর্ড না পাওয়া বা selected না হলে এই static audit list-এ আপনার TIN নেই। তবুও কোনো নোটিশ পেলে official NBR/e-Return বা সংশ্লিষ্ট সার্কেল থেকে যাচাই করুন।",
+            "If not found or not selected, your TIN is not in this static audit list. If you receive any notice, verify it through official NBR/e-Return or your circle office."
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, CalculatorBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                localizedText("পরবর্তী করণীয় ও সহায়তা", "Next Steps and Support"),
+                color = CalculatorInk,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = TiroBanglaFontFamily
+            )
+
+            GuidanceBullet(resultGuidance)
+            GuidanceBullet(
+                localizedText(
+                    "জিরো রিটার্ন বা audit status নিয়ে সন্দেহ থাকলে e-Return hotline 09643717171 অথবা official NBR website ব্যবহার করুন।",
+                    "For zero return or audit-status concerns, use the e-Return hotline 09643717171 or the official NBR website."
+                )
+            )
+            GuidanceBullet(
+                localizedText(
+                    "অফিশিয়াল লিখিত নোটিশ ছাড়া কারও কাছে password, OTP, NID copy বা টাকা পাঠাবেন না। প্রয়োজনে কর্মকর্তা/সার্কেল NBR website থেকে যাচাই করুন।",
+                    "Do not share passwords, OTPs, NID copies, or money without an official written notice. Verify officers/circles from the NBR website when needed."
+                )
+            )
+
+            HorizontalDivider(color = CalculatorBorder)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GuidanceLinkChip(
+                    modifier = Modifier.weight(1f),
+                    text = localizedText("NBR ওয়েবসাইট", "NBR Website"),
+                    onClick = onOpenNbr
+                )
+                GuidanceLinkChip(
+                    modifier = Modifier.weight(1f),
+                    text = localizedText("e-Return", "e-Return"),
+                    onClick = onOpenEReturn
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GuidanceBullet(text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            modifier = Modifier
+                .padding(top = 7.dp)
+                .size(7.dp),
+            shape = CircleShape,
+            color = CalculatorSuccess
+        ) {}
+        Text(
+            text,
+            modifier = Modifier.weight(1f),
+            color = CalculatorMuted,
+            fontSize = 12.sp,
+            lineHeight = 18.sp,
+            fontFamily = TiroBanglaFontFamily
+        )
+    }
+}
+
+@Composable
+private fun GuidanceLinkChip(
+    modifier: Modifier = Modifier,
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = CalculatorSuccess.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(999.dp),
+        border = BorderStroke(1.dp, CalculatorSuccess.copy(alpha = 0.35f))
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            color = CalculatorSuccess,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            fontFamily = TiroBanglaFontFamily
+        )
+    }
+}
+
+@Composable
 private fun AuditDatasetSummary(dataset: AuditDataset?) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            "ডেটাসেট সামারাইজেশন",
+            localizedText("ডেটাসেট সামারাইজেশন", "Dataset Summary"),
             color = CalculatorInk,
             fontSize = 16.sp,
             fontWeight = FontWeight.ExtraBold,
@@ -398,14 +539,14 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
-                label = "মোট TIN",
+                label = localizedText("মোট TIN", "Total TIN"),
                 value = dataset?.totalRecords,
                 pillBackground = CalculatorSuccess.copy(alpha = 0.1f),
                 pillColor = CalculatorSuccess
             )
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
-                label = "নির্বাচিত",
+                label = localizedText("নির্বাচিত", "Selected"),
                 value = dataset?.selectedCount,
                 pillBackground = CalculatorDangerSoft2,
                 pillColor = CalculatorDanger
@@ -415,14 +556,14 @@ private fun AuditDatasetSummary(dataset: AuditDataset?) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
-                label = "নির্বাচিত নয়",
+                label = localizedText("নির্বাচিত নয়", "Not Selected"),
                 value = dataset?.notSelectedCount,
                 pillBackground = CalculatorSuccess.copy(alpha = 0.1f),
                 pillColor = CalculatorSuccess
             )
             AuditSummaryCard(
                 modifier = Modifier.weight(1f),
-                label = "ট্যাক্স জোন",
+                label = localizedText("ট্যাক্স জোন", "Tax Zone"),
                 value = dataset?.zoneCount,
                 pillBackground = CalculatorInfoBackground,
                 pillColor = CalculatorInfo
@@ -498,9 +639,9 @@ private fun AuditLookupResultCard(result: AuditLookupResult?, searchedTin: Strin
         else -> CalculatorSuccess
     }
     val statusTitle = when {
-        result == null -> "রেকর্ড পাওয়া যায়নি"
-        isAudit -> "অডিটের জন্য নির্বাচিত"
-        else -> "অডিট তালিকায় নেই"
+        result == null -> localizedText("রেকর্ড পাওয়া যায়নি", "Record Not Found")
+        isAudit -> localizedText("অডিটের জন্য নির্বাচিত", "Selected for Audit")
+        else -> localizedText("অডিট তালিকায় নেই", "Not in Audit List")
     }
 
     Card(
@@ -535,8 +676,15 @@ private fun AuditLookupResultCard(result: AuditLookupResult?, searchedTin: Strin
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    result?.let { "TIN ${maskTin(it.tin)} · করবর্ষ: ${it.assessmentYear}" }
-                        ?: "TIN ${maskTin(searchedTin)} বর্তমান ডেটাসেটে পাওয়া যায়নি।",
+                    result?.let {
+                        localizedText(
+                            "TIN ${maskTin(it.tin)} · করবর্ষ: ${it.assessmentYear}",
+                            "TIN ${maskTin(it.tin)} · Assessment year: ${it.assessmentYear}"
+                        )
+                    } ?: localizedText(
+                        "TIN ${maskTin(searchedTin)} বর্তমান ডেটাসেটে পাওয়া যায়নি।",
+                        "TIN ${maskTin(searchedTin)} was not found in the current dataset."
+                    ),
                     fontSize = 12.sp,
                     color = statusColor.copy(alpha = 0.78f),
                     fontFamily = TiroBanglaFontFamily,
@@ -547,9 +695,9 @@ private fun AuditLookupResultCard(result: AuditLookupResult?, searchedTin: Strin
             if (result != null) {
                 HorizontalDivider(color = statusColor.copy(alpha = 0.1f))
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AuditDetailRow("জোন", result.zone, statusColor)
-                    AuditDetailRow("সার্কেল", result.circle, statusColor)
-                    AuditDetailRow("ধরণ", result.category, statusColor)
+                    AuditDetailRow(localizedText("জোন", "Zone"), result.zone, statusColor)
+                    AuditDetailRow(localizedText("সার্কেল", "Circle"), result.circle, statusColor)
+                    AuditDetailRow(localizedText("ধরণ", "Type"), result.category, statusColor)
                 }
             }
         }
@@ -563,3 +711,6 @@ private fun AuditDetailRow(label: String, value: String, color: Color) {
         Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = TiroBanglaFontFamily)
     }
 }
+
+private const val NbrWebsiteUrl = "https://nbr.gov.bd"
+private const val EReturnWebsiteUrl = "https://etaxnbr.gov.bd"

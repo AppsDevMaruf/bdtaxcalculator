@@ -8,20 +8,23 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Woman
 
 object TaxDefaults {
-    const val taxYearLabel = "২০২৫-২৬"
+    const val incomeYearLabel = "২০২৫-২৬"
+    const val assessmentYearLabel = "২০২৬-২৭"
+    const val taxYearLabel = assessmentYearLabel
     const val maxTotalExemption = 500_000L
     const val minimumTax = 5_000.0
     const val newAssessmentMinimumTax = 1_000.0
-    const val maxInvestmentRebate = 1_000_000.0
+    const val maxInvestmentRebate = 750_000.0
     const val incomeBasedInvestmentRebateRate = 0.03
-    const val investmentRebateRate = 0.15
+    const val investmentRebateRate = 0.10
+    const val disabledDependentAllowance = 50_000L
 
     val taxpayerTypes = listOf(
-        TaxpayerType("general", "সাধারণ করদাতা", 375_000L, Icons.Default.Person),
-        TaxpayerType("women", "মহিলা করদাতা", 425_000L, Icons.Default.Woman),
-        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 425_000L, Icons.Default.Elderly),
-        TaxpayerType("disabled", "তৃতীয় লিঙ্গ / প্রতিবন্ধী", 500_000L, Icons.AutoMirrored.Filled.Accessible),
-        TaxpayerType("freedomFighter", "মুক্তিযোদ্ধা / জুলাই যোদ্ধা", 525_000L, Icons.Default.MilitaryTech)
+        TaxpayerType("general", "সাধারণ করদাতা", 400_000L, Icons.Default.Person),
+        TaxpayerType("women", "মহিলা করদাতা", 450_000L, Icons.Default.Woman),
+        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 450_000L, Icons.Default.Elderly),
+        TaxpayerType("disabled", "তৃতীয় লিঙ্গ / প্রতিবন্ধী", 525_000L, Icons.AutoMirrored.Filled.Accessible),
+        TaxpayerType("freedomFighter", "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা", 550_000L, Icons.Default.MilitaryTech)
     )
 
     val investmentOptions = listOf(

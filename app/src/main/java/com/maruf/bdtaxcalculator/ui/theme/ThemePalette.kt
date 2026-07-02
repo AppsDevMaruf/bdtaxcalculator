@@ -9,9 +9,9 @@ enum class AppThemePalette(val id: String) {
 
     companion object {
         fun fromId(id: String): AppThemePalette {
-            return entries.firstOrNull { it.id == id } ?: Olive
+            return entries.firstOrNull { it.id == id } ?: ClassicGreen
         }
     }
 }
 
-val LocalAppThemePalette = staticCompositionLocalOf { AppThemePalette.Olive }
+val LocalAppThemePalette = staticCompositionLocalOf { AppThemePalette.ClassicGreen }
