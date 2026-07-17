@@ -116,7 +116,7 @@ fun NbrTinCheckScreen() {
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
             .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 16.dp)
-            .padding(bottom = 18.dp),
+            .padding(bottom = FloatingBottomBarSafePadding),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         TinLookupHeader()

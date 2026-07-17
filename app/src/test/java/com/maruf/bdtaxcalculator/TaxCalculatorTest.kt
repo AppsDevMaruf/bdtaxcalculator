@@ -2,6 +2,8 @@ package com.maruf.bdtaxcalculator
 
 import com.maruf.bdtaxcalculator.tax.InvestmentInputData
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
+import com.maruf.bdtaxcalculator.tax.TaxpayerLocation
+import com.maruf.bdtaxcalculator.tax.TaxYearCatalog
 import com.maruf.bdtaxcalculator.tax.calculateInvestmentRebate
 import com.maruf.bdtaxcalculator.tax.calculateSalaryBreakdown
 import com.maruf.bdtaxcalculator.tax.calculateTax
@@ -20,6 +22,7 @@ class TaxCalculatorTest {
         assertEquals(400_000L, limits["general"])
         assertEquals(450_000L, limits["women"])
         assertEquals(450_000L, limits["senior"])
+        assertEquals(525_000L, limits["thirdGender"])
         assertEquals(525_000L, limits["disabled"])
         assertEquals(550_000L, limits["freedomFighter"])
     }
@@ -178,5 +181,66 @@ class TaxCalculatorTest {
         assertEquals(572_000L, breakdown.taxableIncome)
         assertEquals(17_200.0, result.totalTax, 0.001)
         assertEquals(17_200.0, result.taxAfterRebate, 0.001)
+    }
+
+    @Test
+    fun `catalog contains five consecutive income years`() {
+        assertEquals(
+            listOf("2025-26", "2024-25", "2023-24", "2022-23", "2021-22"),
+            TaxYearCatalog.supportedYears.map { it.incomeYear }
+        )
+        assertEquals(
+            listOf("2026-27", "2025-26", "2024-25", "2023-24", "2022-23"),
+            TaxYearCatalog.supportedYears.map { it.assessmentYear }
+        )
+        assertEquals(
+            5,
+            TaxYearCatalog.supportedYears.count {
+                it.officialSourceUrl.startsWith("https://nbr.gov.bd/") &&
+                    it.officialSourceUrl.endsWith(".pdf")
+            }
+        )
+    }
+
+    @Test
+    fun `historical general thresholds match official schedules`() {
+        val thresholds = TaxYearCatalog.supportedYears.associate { rules ->
+            rules.incomeYear to rules.taxpayerTypes.first { it.id == "general" }.taxFreeLimit
+        }
+
+        assertEquals(400_000L, thresholds["2025-26"])
+        assertEquals(350_000L, thresholds["2024-25"])
+        assertEquals(350_000L, thresholds["2023-24"])
+        assertEquals(350_000L, thresholds["2022-23"])
+        assertEquals(300_000L, thresholds["2021-22"])
+    }
+
+    @Test
+    fun `historical minimum tax follows taxpayer location`() {
+        val rules = TaxYearCatalog.find("2023-24")
+
+        assertEquals(5_000.0, rules.minimumTax("regular", TaxpayerLocation.DhakaOrChattogramCity), 0.001)
+        assertEquals(4_000.0, rules.minimumTax("regular", TaxpayerLocation.OtherCityCorporation), 0.001)
+        assertEquals(3_000.0, rules.minimumTax("regular", TaxpayerLocation.OutsideCityCorporation), 0.001)
+    }
+
+    @Test
+    fun `oldest supported year keeps distinct third gender and disability limits`() {
+        val limits = TaxYearCatalog.find("2021-22").taxpayerTypes.associate { it.id to it.taxFreeLimit }
+
+        assertEquals(350_000L, limits["thirdGender"])
+        assertEquals(450_000L, limits["disabled"])
+    }
+
+    @Test
+    fun `tax calculation uses each selected years slabs`() {
+        val income = 1_000_000L
+        val currentRules = TaxYearCatalog.find("2025-26")
+        val previousRules = TaxYearCatalog.find("2024-25")
+        val olderRules = TaxYearCatalog.find("2022-23")
+
+        assertEquals(75_000.0, calculateTax(income, 400_000L, slabs = currentRules.slabs).totalTax, 0.001)
+        assertEquals(67_500.0, calculateTax(income, 350_000L, slabs = previousRules.slabs).totalTax, 0.001)
+        assertEquals(72_500.0, calculateTax(income, 350_000L, slabs = olderRules.slabs).totalTax, 0.001)
     }
 }

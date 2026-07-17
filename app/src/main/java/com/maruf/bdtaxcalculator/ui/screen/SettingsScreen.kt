@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -76,6 +77,7 @@ import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.tax.LocalTaxPreferenceStore
 import com.maruf.bdtaxcalculator.tax.TaxDefaults
 import com.maruf.bdtaxcalculator.tax.TaxpayerType
+import com.maruf.bdtaxcalculator.tax.TaxYearCatalog
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.ui.AppUiPreferences
 import com.maruf.bdtaxcalculator.ui.localizedText
@@ -105,7 +107,8 @@ private fun TaxpayerType.localizedLabel(): String {
         "general" -> localizedText("সাধারণ করদাতা", "General taxpayer")
         "women" -> localizedText("মহিলা করদাতা", "Female taxpayer")
         "senior" -> localizedText("সিনিয়র সিটিজেন (৬৫+)", "Senior citizen (65+)")
-        "disabled" -> localizedText("তৃতীয় লিঙ্গ / প্রতিবন্ধী", "Third gender / disabled")
+        "thirdGender" -> localizedText("তৃতীয় লিঙ্গ", "Third gender")
+        "disabled" -> localizedText("প্রতিবন্ধী", "Person with disability")
         "freedomFighter" -> localizedText(
             "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা",
             "War-wounded freedom fighter / injured July fighter"
@@ -280,6 +283,65 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.size(18.dp))
 
+        SettingsSection(title = localizedText("তথ্যের উৎস", "Data sources")) {
+            Text(
+                localizedText(
+                    "এই অ্যাপের tax rules জাতীয় রাজস্ব বোর্ডের প্রকাশিত আয়কর পরিপত্রের ভিত্তিতে সাজানো। PDF খুলতে নিচের যেকোনো বছর চাপুন।",
+                    "The tax rules in this app are based on income-tax circulars published by the National Board of Revenue. Tap a year to open the PDF."
+                ),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = CalculatorMuted,
+                fontFamily = TiroBanglaFontFamily
+            )
+
+            TaxYearCatalog.supportedYears.forEach { rules ->
+                ActionRow(
+                    icon = Icons.Default.PictureAsPdf,
+                    title = localizedText(
+                        "আয়কর পরিপত্র ${rules.incomeYear}",
+                        "Income Tax Circular ${rules.incomeYear}"
+                    ),
+                    subtitle = localizedText(
+                        "আয়বর্ষ ${rules.incomeYear} • করবর্ষ ${rules.assessmentYear} • NBR PDF",
+                        "Income year ${rules.incomeYear} • Assessment year ${rules.assessmentYear} • NBR PDF"
+                    ),
+                    onClick = {
+                        FirebaseTracker.logSettingsAction("open_nbr_circular_${rules.incomeYear}")
+                        context.openExternalUrl(rules.officialSourceUrl)
+                    }
+                )
+            }
+
+            ActionRow(
+                icon = Icons.Default.Language,
+                title = localizedText("সব আয়কর পরিপত্র", "All income-tax circulars"),
+                subtitle = localizedText(
+                    "NBR-এর official আয়কর পরিপত্র তালিকা খুলুন।",
+                    "Open the official NBR income-tax circular index."
+                ),
+                onClick = {
+                    FirebaseTracker.logSettingsAction("open_nbr_circular_index")
+                    context.openExternalUrl(NbrIncomeTaxCircularIndexUrl)
+                }
+            )
+
+            Text(
+                localizedText(
+                    "নোট: অ্যাপটি প্রাথমিক হিসাবের সহায়ক। রিটার্ন দাখিল বা চূড়ান্ত সিদ্ধান্তের আগে মূল পরিপত্র এবং প্রযোজ্য আইন যাচাই করুন।",
+                    "Note: This app is a calculation aid. Check the original circular and applicable law before filing a return or making a final decision."
+                ),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                color = CalculatorFieldText,
+                fontFamily = TiroBanglaFontFamily
+            )
+        }
+
+        Spacer(modifier = Modifier.size(18.dp))
+
         SettingsSection(title = localizedText("সহায়তা", "Support")) {
             ActionRow(
                 icon = Icons.Default.Share,
@@ -374,7 +436,7 @@ fun ProfileScreen(
             fontFamily = TiroBanglaFontFamily
         )
 
-        Spacer(modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.size(FloatingBottomBarSafePadding))
     }
 }
 
@@ -1053,6 +1115,9 @@ private const val FacebookPageUrl =
 
 private const val FacebookGroupUrl =
     "https://www.facebook.com/groups/1682838446173061"
+
+private const val NbrIncomeTaxCircularIndexUrl =
+    "https://nbr.gov.bd/taxtypes/income-tax/income-tax-paripatra/ban"
 
 private fun Context.openExternalUrl(url: String) {
     runCatching {

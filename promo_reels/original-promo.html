@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BD Tax Calculator Promo Reel</title>
+  <style>
+    @font-face {
+      font-family: "TiroBanglaLocal";
+      src: url("../app/src/main/res/font/tiro_bangla_regular.ttf") format("truetype");
+      font-weight: 400;
+    }
+
+    @font-face {
+      font-family: "QuicksandLocal";
+      src: url("../app/src/main/res/font/quicksand_bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 1080px;
+      height: 1920px;
+      margin: 0;
+      overflow: hidden;
+      background: #edf7ef;
+    }
+
+    body {
+      font-family: "TiroBanglaLocal", "Bangla MN", serif;
+      color: #0b2115;
+    }
+
+    #stage {
+      position: relative;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 12% 12%, rgba(116, 214, 143, 0.28), transparent 34%),
+        radial-gradient(circle at 90% 82%, rgba(10, 91, 45, 0.18), transparent 38%),
+        linear-gradient(145deg, #f7fff8 0%, #edf8f0 48%, #dff1e5 100%);
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(2px);
+      opacity: 0.9;
+    }
+
+    .orb.one {
+      width: 520px;
+      height: 520px;
+      left: -170px;
+      top: -120px;
+      background: rgba(30, 132, 68, 0.12);
+    }
+
+    .orb.two {
+      width: 740px;
+      height: 740px;
+      right: -320px;
+      bottom: -190px;
+      background: rgba(1, 66, 37, 0.12);
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      opacity: 0.24;
+      background-image:
+        linear-gradient(rgba(5, 78, 43, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(5, 78, 43, 0.12) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: radial-gradient(circle at 70% 62%, black 0%, transparent 58%);
+    }
+
+    .top-brand {
+      position: absolute;
+      top: 78px;
+      left: 72px;
+      right: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-logo {
+      width: 82px;
+      height: 82px;
+      border-radius: 24px;
+      box-shadow: 0 22px 46px rgba(9, 78, 38, 0.18);
+    }
+
+    .brand-title {
+      font-family: "QuicksandLocal", sans-serif;
+      font-size: 34px;
+      line-height: 1;
+      color: #0f3f25;
+      letter-spacing: -0.6px;
+    }
+
+    .privacy-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 22px;
+      border-radius: 999px;
+      color: #126c37;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(14, 98, 50, 0.12);
+      box-shadow: 0 16px 36px rgba(16, 82, 41, 0.1);
+      font-size: 25px;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      transform-origin: center;
+    }
+
+    .hero-copy {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      top: 265px;
+      text-align: left;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      border-radius: 999px;
+      background: rgba(33, 130, 68, 0.1);
+      color: #16713a;
+      font-size: 28px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 99px;
+      background: #21a65b;
+      box-shadow: 0 0 0 8px rgba(33, 166, 91, 0.1);
+    }
+
+    .headline {
+      margin: 34px 0 0;
+      max-width: 880px;
+      font-size: 96px;
+      line-height: 1.05;
+      letter-spacing: -2.5px;
+      color: #071d12;
+      text-wrap: balance;
+    }
+
+    .headline .green {
+      color: #168143;
+    }
+
+    .subtitle {
+      margin-top: 30px;
+      max-width: 805px;
+      color: #506157;
+      font-size: 41px;
+      line-height: 1.42;
+    }
+
+    .hero-card {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      bottom: 170px;
+      min-height: 470px;
+      border-radius: 56px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(13, 70, 37, 0.12);
+      box-shadow: 0 36px 80px rgba(15, 73, 38, 0.18);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      right: -120px;
+      top: -90px;
+      width: 430px;
+      height: 430px;
+      border-radius: 999px;
+      background: rgba(30, 132, 68, 0.08);
+    }
+
+    .metric-row {
+      position: absolute;
+      left: 42px;
+      right: 42px;
+      bottom: 42px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+
+    .metric {
+      border-radius: 28px;
+      padding: 26px 22px;
+      background: #f7fbf8;
+      border: 1px solid rgba(12, 74, 38, 0.08);
+    }
+
+    .metric-label {
+      color: #7b8b82;
+      font-size: 24px;
+    }
+
+    .metric-value {
+      margin-top: 12px;
+      font-family: "QuicksandLocal", sans-serif;
+      color: #13743b;
+      font-size: 40px;
+      letter-spacing: -0.8px;
+    }
+
+    .phone-wrap {
+      position: absolute;
+      right: 70px;
+      top: 345px;
+      width: 445px;
+      height: 920px;
+      border-radius: 74px;
+      padding: 18px;
+      background: linear-gradient(145deg, #071911, #183c27);
+      box-shadow: 0 48px 110px rgba(5, 44, 23, 0.28);
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 56px;
+      padding: 34px 28px;
+      overflow: hidden;
+      background: #f8fff9;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+    }
+
+    .speaker {
+      position: absolute;
+      top: 31px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 112px;
+      height: 30px;
+      border-radius: 999px;
+      background: #06130d;
+      z-index: 3;
+    }
+
+    .mini-title {
+      margin-top: 42px;
+      font-size: 31px;
+      color: #071d12;
+      line-height: 1.15;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px;
+      margin-top: 28px;
+    }
+
+    .summary-box {
+      min-height: 116px;
+      border-radius: 22px;
+      padding: 18px;
+      background: #eff8f1;
+      color: #5f7167;
+      font-size: 20px;
+    }
+
+    .summary-box strong {
+      display: block;
+      margin-top: 8px;
+      font-family: "QuicksandLocal", sans-serif;
+      color: #128044;
+      font-size: 27px;
+    }
+
+    .result-panel {
+      margin-top: 24px;
+      padding: 25px 22px;
+      border-radius: 32px;
+      background: linear-gradient(150deg, #0d763a, #07451f);
+      color: white;
+      box-shadow: 0 20px 44px rgba(9, 85, 42, 0.28);
+    }
+
+    .result-panel .small {
+      opacity: 0.76;
+      font-size: 20px;
+    }
+
+    .result-panel .big {
+      margin-top: 8px;
+      font-family: "QuicksandLocal", sans-serif;
+      font-size: 44px;
+    }
+
+    .left-copy {
+      position: absolute;
+      left: 72px;
+      top: 430px;
+      width: 465px;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-top: 36px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 22px 24px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: 0 18px 40px rgba(10, 73, 38, 0.1);
+      border: 1px solid rgba(17, 101, 50, 0.1);
+      color: #193b27;
+      font-size: 32px;
+    }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 62px;
+      height: 62px;
+      border-radius: 20px;
+      color: white;
+      background: linear-gradient(145deg, #2ab464, #0c7437);
+      box-shadow: 0 14px 24px rgba(12, 116, 55, 0.22);
+    }
+
+    .audit-card {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      top: 390px;
+      padding: 46px;
+      border-radius: 56px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(17, 101, 50, 0.12);
+      box-shadow: 0 34px 86px rgba(10, 68, 34, 0.16);
+    }
+
+    .input {
+      margin-top: 32px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      height: 98px;
+      padding: 0 28px;
+      border-radius: 28px;
+      border: 2px solid rgba(17, 101, 50, 0.14);
+      background: #f9fdfa;
+      color: #75847a;
+      font-size: 34px;
+    }
+
+    .cta-button {
+      margin-top: 28px;
+      height: 96px;
+      border-radius: 29px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 34px;
+      background: linear-gradient(135deg, #15934b, #075423);
+      box-shadow: 0 22px 44px rgba(9, 88, 40, 0.22);
+    }
+
+    .stat-grid {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      bottom: 175px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .stat-card {
+      min-height: 205px;
+      border-radius: 38px;
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(17, 101, 50, 0.12);
+      box-shadow: 0 22px 54px rgba(9, 80, 39, 0.12);
+    }
+
+    .stat-card .value {
+      font-family: "QuicksandLocal", sans-serif;
+      color: #13743b;
+      font-size: 48px;
+      margin-top: 16px;
+    }
+
+    .privacy-stack {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      top: 500px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .privacy-item {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 30px;
+      border-radius: 34px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(12, 85, 43, 0.1);
+      box-shadow: 0 20px 48px rgba(8, 70, 35, 0.11);
+      font-size: 35px;
+      color: #183b28;
+    }
+
+    .footer-note {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      bottom: 176px;
+      padding: 30px;
+      border-radius: 34px;
+      text-align: center;
+      background: rgba(16, 124, 58, 0.1);
+      color: #156f3a;
+      font-size: 31px;
+    }
+
+    .final-logo {
+      position: absolute;
+      top: 295px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 245px;
+      height: 245px;
+      border-radius: 62px;
+      box-shadow: 0 40px 90px rgba(8, 71, 35, 0.22);
+    }
+
+    .final-title {
+      position: absolute;
+      top: 585px;
+      left: 72px;
+      right: 72px;
+      text-align: center;
+      font-size: 78px;
+      line-height: 1.06;
+      color: #071d12;
+    }
+
+    .final-subtitle {
+      position: absolute;
+      top: 790px;
+      left: 86px;
+      right: 86px;
+      text-align: center;
+      font-size: 39px;
+      color: #506157;
+      line-height: 1.38;
+    }
+
+    .store-button {
+      position: absolute;
+      left: 112px;
+      right: 112px;
+      bottom: 365px;
+      height: 108px;
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      color: white;
+      background: linear-gradient(135deg, #168143, #063e1b);
+      box-shadow: 0 26px 58px rgba(8, 80, 37, 0.24);
+      font-size: 36px;
+    }
+
+    .disclaimer {
+      position: absolute;
+      left: 72px;
+      right: 72px;
+      bottom: 245px;
+      color: #6e7f75;
+      text-align: center;
+      font-size: 26px;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <script>
+    const logoPath = "../app/src/main/play-store/tax-calculator-bd-icon-512.png";
+    const stage = document.getElementById("stage");
+
+    function clamp(value, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function easeOut(t) {
+      t = clamp(t);
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function easeInOut(t) {
+      t = clamp(t);
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function styleIn(local, delay = 0, duration = 0.7, y = 54, scale = 0.98) {
+      const p = easeOut((local - delay) / duration);
+      return `opacity:${p};transform:translateY(${(1 - p) * y}px) scale(${scale + (1 - scale) * p});`;
+    }
+
+    function iconSvg(type) {
+      const common = `width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"`;
+      const paths = {
+        calc: `<svg ${common}><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg>`,
+        search: `<svg ${common}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>`,
+        shield: `<svg ${common}><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>`,
+        check: `<svg ${common}><path d="m5 12 4 4L19 6"/></svg>`,
+        lock: `<svg ${common}><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>`,
+        db: `<svg ${common}><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v7c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12v7c0 1.7 3.1 3 7 3s7-1.3 7-3v-7"/></svg>`,
+        wifiOff: `<svg ${common}><path d="m2 2 20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M5 13a10 10 0 0 1 2.8-1.8"/><path d="M16.2 11.2A10 10 0 0 1 19 13"/><path d="M12 20h.01"/></svg>`,
+        play: `<svg ${common} fill="currentColor" stroke="none"><path d="M5 3.5v17l14-8.5-14-8.5Z"/></svg>`
+      };
+      return paths[type] || paths.check;
+    }
+
+    function base() {
+      return `
+        <div class="orb one"></div>
+        <div class="orb two"></div>
+        <div class="grid"></div>
+        <div class="top-brand">
+          <div class="brand-left">
+            <img class="brand-logo" src="${logoPath}" />
+            <div class="brand-title">BD Tax Calculator</div>
+          </div>
+          <div class="privacy-pill"><span class="dot"></span> Offline First</div>
+        </div>
+      `;
+    }
+
+    function intro(local) {
+      return `
+        <section class="scene">
+          <div class="hero-copy" style="${styleIn(local, 0, 0.9, 65)}">
+            <div class="eyebrow"><span class="dot"></span> করবর্ষ ২০২৬-২৭ প্রস্তুত</div>
+            <h1 class="headline">আয়কর হিসাব<br><span class="green">এখন আরও সহজ</span></h1>
+            <div class="subtitle">নতুন নিয়ম অনুযায়ী কর, রিবেট, অডিট স্ট্যাটাস ও দরকারি তথ্য এক জায়গায়।</div>
+          </div>
+          <div class="hero-card" style="${styleIn(local, 0.45, 0.8, 85)}">
+            <div style="position:absolute;left:44px;top:46px;font-size:42px;color:#102718;">স্মার্ট ট্যাক্স সহকারী</div>
+            <div style="position:absolute;left:44px;top:114px;font-size:29px;color:#6b7f73;max-width:520px;line-height:1.35;">বাংলাদেশের ব্যক্তিগত আয়কর হিসাবের জন্য সুন্দর, দ্রুত ও privacy-first app.</div>
+            <div class="metric-row">
+              <div class="metric"><div class="metric-label">ভাষা</div><div class="metric-value">বাংলা + EN</div></div>
+              <div class="metric"><div class="metric-label">মোড</div><div class="metric-value">Day/Night</div></div>
+              <div class="metric"><div class="metric-label">ডেটা</div><div class="metric-value">Offline</div></div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function calculator(local) {
+      const p = easeInOut(local / 3.2);
+      return `
+        <section class="scene">
+          <div class="left-copy" style="${styleIn(local, 0, 0.75, 60)}">
+            <div class="eyebrow"><span class="dot"></span> Tax Calculator</div>
+            <h1 class="headline" style="font-size:74px;margin-top:28px;">নতুন slab অনুযায়ী<br><span class="green">তাৎক্ষণিক হিসাব</span></h1>
+            <div class="feature-list">
+              <div class="feature" style="${styleIn(local, 0.25, 0.65, 38)}"><div class="icon">${iconSvg("calc")}</div>করযোগ্য আয়</div>
+              <div class="feature" style="${styleIn(local, 0.45, 0.65, 38)}"><div class="icon">${iconSvg("check")}</div>রিবেট ও বিনিয়োগ</div>
+              <div class="feature" style="${styleIn(local, 0.65, 0.65, 38)}"><div class="icon">${iconSvg("shield")}</div>প্রদেয় কর সারাংশ</div>
+            </div>
+          </div>
+          <div class="phone-wrap" style="transform:translateY(${(1 - easeOut(local / 0.8)) * 90}px) rotate(${(-6 + p * 4).toFixed(2)}deg);opacity:${easeOut(local / 0.75)};">
+            <div class="speaker"></div>
+            <div class="phone-screen">
+              <div class="mini-title">আয়কর ক্যালকুলেটর<br><span style="font-size:20px;color:#75847a;">করবর্ষ ২০২৬-২৭</span></div>
+              <div class="summary-grid">
+                <div class="summary-box">করযোগ্য আয়<strong>৳ ৮,২৫,০০০</strong></div>
+                <div class="summary-box">প্রদেয় কর<strong style="color:#d7333f;">৳ ১৯,৭০০</strong></div>
+                <div class="summary-box">রিবেট<strong>৳ ০</strong></div>
+                <div class="summary-box">হার<strong>২.৪%</strong></div>
+              </div>
+              <div class="result-panel">
+                <div class="small">চূড়ান্ত প্রদেয় কর</div>
+                <div class="big">৳ ১৯,৭০০</div>
+              </div>
+              <div style="margin-top:24px;border-radius:24px;background:#eef7f1;padding:20px;color:#556b5e;font-size:20px;line-height:1.32;">বেতন বিভাজন, advance tax ও source tax সমন্বয় সহ হিসাব দেখুন।</div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function audit(local) {
+      return `
+        <section class="scene">
+          <div class="audit-card" style="${styleIn(local, 0, 0.75, 70)}">
+            <div class="eyebrow"><span class="dot"></span> TIN Audit Check</div>
+            <h1 class="headline" style="font-size:70px;margin-top:26px;">আপনার TIN<br><span class="green">অডিটে আছে কিনা?</span></h1>
+            <div class="subtitle" style="font-size:35px;margin-top:22px;">Static JSON data থেকে instant check. কোনো backend, database বা tracking নেই।</div>
+            <div class="input">${iconSvg("search")} ১২ সংখ্যার TIN লিখুন</div>
+            <div class="cta-button">Check Audit Status</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-card" style="${styleIn(local, 0.45, 0.65, 55)}"><div class="icon">${iconSvg("shield")}</div><div class="value">৮৭,৬৮৫</div><div style="font-size:28px;color:#667a6d;">মোট TIN</div></div>
+            <div class="stat-card" style="${styleIn(local, 0.6, 0.65, 55)}"><div class="icon" style="background:linear-gradient(145deg,#f15b5b,#c52839);">${iconSvg("check")}</div><div class="value" style="color:#cc2c39;">১৫,৪৮৯</div><div style="font-size:28px;color:#667a6d;">নির্বাচিত</div></div>
+          </div>
+        </section>
+      `;
+    }
+
+    function privacy(local) {
+      return `
+        <section class="scene">
+          <div class="hero-copy" style="${styleIn(local, 0, 0.72, 62)}">
+            <div class="eyebrow"><span class="dot"></span> Privacy First</div>
+            <h1 class="headline" style="font-size:76px;">ডেটা থাকবে<br><span class="green">শুধু আপনার ডিভাইসে</span></h1>
+          </div>
+          <div class="privacy-stack">
+            <div class="privacy-item" style="${styleIn(local, 0.18, 0.64, 46)}"><div class="icon">${iconSvg("wifiOff")}</div>কোনো network API call নেই</div>
+            <div class="privacy-item" style="${styleIn(local, 0.36, 0.64, 46)}"><div class="icon">${iconSvg("db")}</div>কোনো backend server/database নেই</div>
+            <div class="privacy-item" style="${styleIn(local, 0.54, 0.64, 46)}"><div class="icon">${iconSvg("lock")}</div>Static JSON data app-এর ভেতরেই থাকে</div>
+            <div class="privacy-item" style="${styleIn(local, 0.72, 0.64, 46)}"><div class="icon">${iconSvg("shield")}</div>Bangla/English, Day/Night theme</div>
+          </div>
+          <div class="footer-note" style="${styleIn(local, 1.05, 0.7, 40)}">কর হিসাবের জন্য দ্রুত, সুন্দর ও নিরাপদ অভিজ্ঞতা।</div>
+        </section>
+      `;
+    }
+
+    function finalScene(local) {
+      return `
+        <section class="scene">
+          <img class="final-logo" src="${logoPath}" style="${styleIn(local, 0, 0.7, 65, 0.82)}" />
+          <div class="final-title" style="${styleIn(local, 0.18, 0.72, 54)}">BD Tax Calculator</div>
+          <div class="final-subtitle" style="${styleIn(local, 0.38, 0.72, 48)}">বাংলাদেশের আয়কর হিসাব, অডিট চেক, FAQ ও দরকারি সরকারি লিংক — সব এক app-এ।</div>
+          <div class="store-button" style="${styleIn(local, 0.75, 0.72, 54)}">${iconSvg("play")} Play Store থেকে আপডেট করুন</div>
+          <div class="disclaimer" style="${styleIn(local, 1.0, 0.72, 40)}">Official NBR rules অনুযায়ী সহায়ক হিসাব। Final return জমার আগে তথ্য যাচাই করুন।</div>
+        </section>
+      `;
+    }
+
+    window.renderFrame = function renderFrame(t) {
+      let sceneHtml = "";
+      if (t < 2.8) {
+        sceneHtml = intro(t);
+      } else if (t < 5.9) {
+        sceneHtml = calculator(t - 2.8);
+      } else if (t < 8.9) {
+        sceneHtml = audit(t - 5.9);
+      } else if (t < 11.7) {
+        sceneHtml = privacy(t - 8.9);
+      } else {
+        sceneHtml = finalScene(t - 11.7);
+      }
+
+      stage.innerHTML = base() + sceneHtml;
+
+      const fadeIn = clamp(t / 0.45);
+      const fadeOut = clamp((14 - t) / 0.65);
+      stage.style.opacity = Math.min(fadeIn, fadeOut);
+    };
+
+    window.renderFrame(0);
+  </script>
+</body>
+</html>

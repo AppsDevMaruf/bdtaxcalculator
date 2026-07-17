@@ -17,9 +17,9 @@ android {
     defaultConfig {
         applicationId = "com.maruf.bdtaxcalculator"
         minSdk = 24
-        targetSdk = 36
-        versionCode = 13
-        versionName = "1.1.13"
+        targetSdk = 37
+        versionCode = 16
+        versionName = "1.1.16"
     }
 
     buildTypes {

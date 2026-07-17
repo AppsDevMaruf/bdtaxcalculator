@@ -1,14 +1,16 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -32,6 +34,8 @@ enum class AppDestination {
     AuditChecker,
     Profile
 }
+
+internal val FloatingBottomBarSafePadding = 112.dp
 
 private fun NavHostController.navigateToBottomTab(route: String) {
     navigate(route) {
@@ -72,46 +76,11 @@ fun AppRootScreen(
         FirebaseTracker.logScreen(screenName)
     }
 
-    Scaffold(
-        bottomBar = {
-            if (!isKeyboardOpen) {
-                HomeBottomNavigation(
-                    selectedDestination = when (currentRoute) {
-                        Screen.TaxCalculator.route -> AppDestination.TaxCalculator
-                        Screen.AuditChecker.route -> AppDestination.AuditChecker
-                        Screen.Home.route -> AppDestination.Home
-                        Screen.Profile.route -> AppDestination.Profile
-                        else -> AppDestination.Home
-                    },
-                    onOpenHome = {
-                        if (currentRoute != Screen.Home.route) {
-                            navController.navigateToBottomTab(Screen.Home.route)
-                        }
-                    },
-                    onOpenTaxCalculator = {
-                        if (currentRoute != Screen.TaxCalculator.route) {
-                            navController.navigateToBottomTab(Screen.TaxCalculator.route)
-                        }
-                    },
-                    onOpenAuditChecker = {
-                        if (currentRoute != Screen.AuditChecker.route) {
-                            navController.navigateToBottomTab(Screen.AuditChecker.route)
-                        }
-                    },
-                    onOpenProfile = {
-                        if (currentRoute != Screen.Profile.route) {
-                            navController.navigateToBottomTab(Screen.Profile.route)
-                        }
-                    }
-                )
-            }
-        },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -158,6 +127,39 @@ fun AppRootScreen(
                     onRateApp = onOpenStoreListing
                 )
             }
+        }
+
+        if (!isKeyboardOpen) {
+            HomeBottomNavigation(
+                selectedDestination = when (currentRoute) {
+                    Screen.TaxCalculator.route -> AppDestination.TaxCalculator
+                    Screen.AuditChecker.route -> AppDestination.AuditChecker
+                    Screen.Home.route -> AppDestination.Home
+                    Screen.Profile.route -> AppDestination.Profile
+                    else -> AppDestination.Home
+                },
+                onOpenHome = {
+                    if (currentRoute != Screen.Home.route) {
+                        navController.navigateToBottomTab(Screen.Home.route)
+                    }
+                },
+                onOpenTaxCalculator = {
+                    if (currentRoute != Screen.TaxCalculator.route) {
+                        navController.navigateToBottomTab(Screen.TaxCalculator.route)
+                    }
+                },
+                onOpenAuditChecker = {
+                    if (currentRoute != Screen.AuditChecker.route) {
+                        navController.navigateToBottomTab(Screen.AuditChecker.route)
+                    }
+                },
+                onOpenProfile = {
+                    if (currentRoute != Screen.Profile.route) {
+                        navController.navigateToBottomTab(Screen.Profile.route)
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

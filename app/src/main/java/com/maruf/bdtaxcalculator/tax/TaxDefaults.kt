@@ -1,12 +1,5 @@
 package com.maruf.bdtaxcalculator.tax
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Accessible
-import androidx.compose.material.icons.filled.Elderly
-import androidx.compose.material.icons.filled.MilitaryTech
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Woman
-
 object TaxDefaults {
     const val incomeYearLabel = "২০২৫-২৬"
     const val assessmentYearLabel = "২০২৬-২৭"
@@ -19,13 +12,7 @@ object TaxDefaults {
     const val investmentRebateRate = 0.10
     const val disabledDependentAllowance = 50_000L
 
-    val taxpayerTypes = listOf(
-        TaxpayerType("general", "সাধারণ করদাতা", 400_000L, Icons.Default.Person),
-        TaxpayerType("women", "মহিলা করদাতা", 450_000L, Icons.Default.Woman),
-        TaxpayerType("senior", "সিনিয়র সিটিজেন (৬৫+)", 450_000L, Icons.Default.Elderly),
-        TaxpayerType("disabled", "তৃতীয় লিঙ্গ / প্রতিবন্ধী", 525_000L, Icons.AutoMirrored.Filled.Accessible),
-        TaxpayerType("freedomFighter", "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা", 550_000L, Icons.Default.MilitaryTech)
-    )
+    val taxpayerTypes get() = TaxYearCatalog.current.taxpayerTypes
 
     val investmentOptions = listOf(
         InvestmentInputData("dse", "DSE শেয়ার"),

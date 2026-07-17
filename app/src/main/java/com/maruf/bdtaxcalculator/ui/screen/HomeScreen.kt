@@ -3,16 +3,22 @@ package com.maruf.bdtaxcalculator.ui.screen
 import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -20,12 +26,14 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -66,6 +74,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -84,13 +93,13 @@ import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorPanel
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlueDark
 import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
 import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
-import com.maruf.bdtaxcalculator.ui.theme.HomeSoftNav
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextMuted
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextPrimary
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
@@ -143,7 +152,14 @@ fun HomeScreen(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 18.dp),
+                .padding(
+                    PaddingValues(
+                        start = 16.dp,
+                        top = 18.dp,
+                        end = 16.dp,
+                        bottom = FloatingBottomBarSafePadding
+                    )
+                ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
@@ -867,82 +883,146 @@ fun HomeBottomNavigation(
     onOpenHome: () -> Unit,
     onOpenTaxCalculator: () -> Unit,
     onOpenAuditChecker: () -> Unit,
-    onOpenProfile: () -> Unit
+    onOpenProfile: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 10.dp
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(32.dp),
+            tonalElevation = 0.dp,
+            shadowElevation = 14.dp
         ) {
-            BottomNavItem(
-                icon = Icons.Default.Home,
-                label = localizedText("হোম", "Home"),
-                isSelected = selectedDestination == AppDestination.Home,
-                onClick = onOpenHome
-            )
-            BottomNavItem(
-                icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                label = localizedText("ক্যালকুলেটর", "Calculator"),
-                isSelected = selectedDestination == AppDestination.TaxCalculator,
-                onClick = onOpenTaxCalculator
-            )
-            BottomNavItem(
-                icon = Icons.Default.Security,
-                label = localizedText("অডিট", "Audit"),
-                isSelected = selectedDestination == AppDestination.AuditChecker,
-                onClick = onOpenAuditChecker
-            )
-            BottomNavItem(
-                icon = Icons.Default.Settings,
-                label = localizedText("সেটিংস", "Settings"),
-                isSelected = selectedDestination == AppDestination.Profile,
-                onClick = onOpenProfile
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BottomNavItem(
+                    icon = Icons.Default.Home,
+                    label = localizedText("হোম", "Home"),
+                    isSelected = selectedDestination == AppDestination.Home,
+                    onClick = onOpenHome
+                )
+                BottomNavItem(
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                    label = localizedText("ক্যালকুলেটর", "Calculator"),
+                    isSelected = selectedDestination == AppDestination.TaxCalculator,
+                    onClick = onOpenTaxCalculator
+                )
+                BottomNavItem(
+                    icon = Icons.Default.Security,
+                    label = localizedText("অডিট", "Audit"),
+                    isSelected = selectedDestination == AppDestination.AuditChecker,
+                    onClick = onOpenAuditChecker
+                )
+                BottomNavItem(
+                    icon = Icons.Default.Settings,
+                    label = localizedText("সেটিংস", "Settings"),
+                    isSelected = selectedDestination == AppDestination.Profile,
+                    onClick = onOpenProfile
+                )
+            }
         }
     }
 }
 
 @Composable
-fun BottomNavItem(
+private fun BottomNavItem(
     icon: ImageVector,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.noRippleClickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+    val itemWidth by animateDpAsState(
+        targetValue = if (isSelected) 106.dp else 48.dp,
+        animationSpec = tween(durationMillis = 260),
+        label = "bottomNavWidth"
+    )
+    val itemScale by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0.94f,
+        animationSpec = tween(durationMillis = 220),
+        label = "bottomNavScale"
+    )
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            CalculatorSurfaceAlt
+        },
+        animationSpec = tween(durationMillis = 220),
+        label = "bottomNavBackground"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            HomeNavInactive
+        },
+        animationSpec = tween(durationMillis = 220),
+        label = "bottomNavContent"
+    )
+
+    Surface(
+        modifier = Modifier
+            .width(itemWidth)
+            .height(48.dp)
+            .graphicsLayer {
+                scaleX = itemScale
+                scaleY = itemScale
+            }
+            .noRippleClickable(onClick = onClick),
+        color = backgroundColor,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                CalculatorBorder
+            }
+        )
     ) {
-        Surface(
-            color = if (isSelected) HomeSoftNav else MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-            shape = RoundedCornerShape(12.dp)
+        Row(
+            modifier = Modifier.padding(horizontal = if (isSelected) 12.dp else 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+            AnimatedVisibility(
+                visible = isSelected,
+                enter = expandHorizontally(
+                    animationSpec = tween(durationMillis = 240),
+                    expandFrom = Alignment.Start
+                ) + fadeIn(animationSpec = tween(durationMillis = 180)),
+                exit = shrinkHorizontally(
+                    animationSpec = tween(durationMillis = 180),
+                    shrinkTowards = Alignment.Start
+                ) + fadeOut(animationSpec = tween(durationMillis = 120))
             ) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = if (isSelected) HomeActionBlue else HomeNavInactive,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = label,
+                    modifier = Modifier.padding(start = 7.dp),
+                    maxLines = 1,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    fontFamily = TiroBanglaFontFamily
                 )
             }
         }
-        Text(
-            label,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            color = if (isSelected) HomeActionBlue else HomeNavInactive,
-            fontFamily = TiroBanglaFontFamily
-        )
     }
 }

@@ -3,7 +3,11 @@ package com.maruf.bdtaxcalculator.tax
 import kotlin.math.roundToLong
 import java.util.Locale
 
-fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakdown {
+fun calculateSalaryBreakdown(
+    grossSalary: Long,
+    yearlyBonus: Long,
+    rules: TaxYearRules = TaxYearCatalog.current
+): SalaryBreakdown {
     val conveyance = (grossSalary * 0.05).roundToLong()
     val basicSalary = ((grossSalary - conveyance) / 1.6).roundToLong()
     val houseRent = (basicSalary * 0.50).roundToLong()
@@ -11,10 +15,22 @@ fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakd
     val otherAllowances = grossSalary - (basicSalary + houseRent + medical + conveyance)
 
     val totalIncome = (grossSalary * 12) + yearlyBonus
-    val totalExemption = minOf(
-        totalIncome / 3,
-        TaxDefaults.maxTotalExemption
-    )
+    val totalExemption = when (rules.salaryExemptionMethod) {
+        SalaryExemptionMethod.StandardOneThird -> minOf(
+            totalIncome / 3,
+            rules.salaryExemptionCap
+        )
+        SalaryExemptionMethod.LegacyAllowanceBased -> {
+            val annualBasic = basicSalary * 12
+            val annualHouseRent = houseRent * 12
+            val annualMedical = medical * 12
+            val annualConveyance = conveyance * 12
+            val exemptHouseRent = minOf(annualHouseRent, annualBasic / 2, 300_000L)
+            val exemptMedical = minOf(annualMedical, annualBasic / 10, 120_000L)
+            val exemptConveyance = minOf(annualConveyance, 30_000L)
+            exemptHouseRent + exemptMedical + exemptConveyance
+        }
+    }
 
     return SalaryBreakdown(
         grossSalary = grossSalary,
@@ -30,16 +46,32 @@ fun calculateSalaryBreakdown(grossSalary: Long, yearlyBonus: Long): SalaryBreakd
     )
 }
 
-fun calculateInvestmentRebate(investments: List<InvestmentInputData>, taxableIncome: Long): Double {
+fun calculateInvestmentRebate(
+    investments: List<InvestmentInputData>,
+    taxableIncome: Long,
+    rules: TaxYearRules = TaxYearCatalog.current
+): Double {
     val totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
-    val rebateByInvestment = totalInvestment * TaxDefaults.investmentRebateRate
-    val rebateByIncome = taxableIncome * TaxDefaults.incomeBasedInvestmentRebateRate
-    return minOf(rebateByInvestment, rebateByIncome, TaxDefaults.maxInvestmentRebate)
+    val rebateByInvestment = totalInvestment * rules.investmentRebateRate
+    val rebateByIncome = taxableIncome * rules.incomeBasedInvestmentRebateRate
+    return minOf(rebateByInvestment, rebateByIncome, rules.maxInvestmentRebate)
 }
 
 fun calculateTaxFreeLimit(baseTaxFreeLimit: Long, disabledDependentCount: Int): Long {
+    return calculateTaxFreeLimit(
+        baseTaxFreeLimit = baseTaxFreeLimit,
+        disabledDependentCount = disabledDependentCount,
+        allowancePerDependent = TaxDefaults.disabledDependentAllowance
+    )
+}
+
+fun calculateTaxFreeLimit(
+    baseTaxFreeLimit: Long,
+    disabledDependentCount: Int,
+    allowancePerDependent: Long
+): Long {
     return baseTaxFreeLimit +
-        disabledDependentCount.coerceAtLeast(0).toLong() * TaxDefaults.disabledDependentAllowance
+        disabledDependentCount.coerceAtLeast(0).toLong() * allowancePerDependent
 }
 
 fun calculateTaxPaymentAdjustment(
@@ -66,7 +98,8 @@ fun calculateTax(
     income: Long,
     taxFreeLimit: Long,
     investmentRebate: Double = 0.0,
-    minimumTax: Double = TaxDefaults.minimumTax
+    minimumTax: Double = TaxDefaults.minimumTax,
+    slabs: List<TaxSlabRule> = TaxYearCatalog.current.slabs
 ): TaxResult {
     if (income <= taxFreeLimit) {
         return TaxResult(
@@ -79,29 +112,21 @@ fun calculateTax(
         )
     }
 
-    val slabs = listOf(
-        300_000L to 0.10,
-        400_000L to 0.15,
-        500_000L to 0.20,
-        2_000_000L to 0.25,
-        Long.MAX_VALUE to 0.30
-    )
-
     var remainingIncome = income - taxFreeLimit
     var currentStart = taxFreeLimit
     var rawTax = 0.0
     val breakdown = mutableListOf<TaxBreakdown>()
 
-    for ((slabSize, rate) in slabs) {
+    for (slab in slabs) {
         if (remainingIncome <= 0) break
 
-        val taxableInSlab = minOf(remainingIncome, slabSize)
-        val slabTax = taxableInSlab * rate
+        val taxableInSlab = minOf(remainingIncome, slab.amount)
+        val slabTax = taxableInSlab * slab.rate
 
         breakdown += TaxBreakdown(
             label = formatTaxSlabLabel(currentStart, taxableInSlab),
             amount = taxableInSlab,
-            rate = rate * 100,
+            rate = slab.rate * 100,
             tax = slabTax
         )
 

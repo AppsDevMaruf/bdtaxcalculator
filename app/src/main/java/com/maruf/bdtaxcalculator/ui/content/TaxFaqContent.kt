@@ -17,6 +17,7 @@ const val NbrFaqSourceUrl = "https://nbr.gov.bd/all-faq/eng"
 fun incomeTaxFaqs(): List<TaxFaq> {
     val generalLimit = TaxDefaults.taxpayerTypes.first { it.id == "general" }.taxFreeLimit
     val womenLimit = TaxDefaults.taxpayerTypes.first { it.id == "women" }.taxFreeLimit
+    val thirdGenderLimit = TaxDefaults.taxpayerTypes.first { it.id == "thirdGender" }.taxFreeLimit
     val disabledLimit = TaxDefaults.taxpayerTypes.first { it.id == "disabled" }.taxFreeLimit
     val freedomFighterLimit = TaxDefaults.taxpayerTypes.first { it.id == "freedomFighter" }.taxFreeLimit
     val minimumTax = TaxDefaults.minimumTax.roundToLong()
@@ -209,8 +210,8 @@ fun incomeTaxFaqs(): List<TaxFaq> {
             id = "tax_free_limit",
             banglaQuestion = "আয়কর আরোপযোগ্য সীমা কি?",
             englishQuestion = "What is the tax-free threshold?",
-            banglaAnswer = "অর্থ আইন ২০২৬ অনুযায়ী সাধারণ করদাতা ${generalLimit.bnMoney()}, মহিলা/৬৫+ ${womenLimit.bnMoney()}, প্রতিবন্ধী/তৃতীয় লিঙ্গ ${disabledLimit.bnMoney()}, এবং গেজেটভুক্ত যুদ্ধাহত মুক্তিযোদ্ধা/আহত জুলাই যোদ্ধা ${freedomFighterLimit.bnMoney()} পর্যন্ত করমুক্ত। প্রতিবন্ধী সন্তান/পোষ্য প্রতি পিতা-মাতা বা আইনানুগ অভিভাবকের করমুক্ত সীমা আরও ${TaxDefaults.disabledDependentAllowance.bnMoney()} বাড়বে; বাবা-মা উভয়েই করদাতা হলে একজন এই সুবিধা পাবেন।",
-            englishAnswer = "Under the Finance Act 2026, the thresholds are ${generalLimit.enMoney()} for general taxpayers, ${womenLimit.enMoney()} for female/65+, ${disabledLimit.enMoney()} for disabled/third gender, and ${freedomFighterLimit.enMoney()} for gazetted war-wounded freedom fighters/injured July fighters. A parent or legal guardian receives an additional ${TaxDefaults.disabledDependentAllowance.enMoney()} for each disabled child/dependent; only one parent may claim it when both are taxpayers."
+            banglaAnswer = "২০২৬-২৭ করবর্ষে সাধারণ করদাতা ${generalLimit.bnMoney()}, মহিলা/৬৫+ ${womenLimit.bnMoney()}, তৃতীয় লিঙ্গ ${thirdGenderLimit.bnMoney()}, প্রতিবন্ধী ${disabledLimit.bnMoney()}, এবং গেজেটভুক্ত যুদ্ধাহত মুক্তিযোদ্ধা/আহত জুলাই যোদ্ধা ${freedomFighterLimit.bnMoney()} পর্যন্ত করমুক্ত। প্রতিবন্ধী সন্তান/পোষ্য প্রতি পিতা-মাতা বা আইনানুগ অভিভাবকের করমুক্ত সীমা আরও ${TaxDefaults.disabledDependentAllowance.bnMoney()} বাড়বে; বাবা-মা উভয়েই করদাতা হলে একজন এই সুবিধা পাবেন।",
+            englishAnswer = "For tax year 2026-27, the thresholds are ${generalLimit.enMoney()} for general taxpayers, ${womenLimit.enMoney()} for female/65+, ${thirdGenderLimit.enMoney()} for third-gender taxpayers, ${disabledLimit.enMoney()} for persons with disability, and ${freedomFighterLimit.enMoney()} for gazetted war-wounded freedom fighters/injured July fighters. A parent or legal guardian receives an additional ${TaxDefaults.disabledDependentAllowance.enMoney()} for each disabled child/dependent; only one parent may claim it when both are taxpayers."
         ),
         TaxFaq(
             id = "individual_tax_rate",

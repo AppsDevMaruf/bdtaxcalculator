@@ -97,6 +97,9 @@ import com.maruf.bdtaxcalculator.tax.TaxPaymentAdjustment
 import com.maruf.bdtaxcalculator.tax.TaxResult
 import com.maruf.bdtaxcalculator.tax.TaxSummary
 import com.maruf.bdtaxcalculator.tax.TaxpayerType
+import com.maruf.bdtaxcalculator.tax.TaxpayerLocation
+import com.maruf.bdtaxcalculator.tax.TaxYearCatalog
+import com.maruf.bdtaxcalculator.tax.TaxYearRules
 import com.maruf.bdtaxcalculator.tax.calculateInvestmentRebate
 import com.maruf.bdtaxcalculator.tax.calculateSalaryBreakdown
 import com.maruf.bdtaxcalculator.tax.calculateTax
@@ -152,25 +155,21 @@ private fun normalizeNumericInput(input: String, maxLength: Int = MaxMoneyInputL
 }
 
 @Composable
-private fun incomeYearLabel(): String = localizedText(TaxDefaults.incomeYearLabel, "2025-26")
-
-@Composable
-private fun assessmentYearLabel(): String = localizedText(TaxDefaults.assessmentYearLabel, "2026-27")
-
-@Composable
-private fun taxYearLabel(): String = assessmentYearLabel()
-
-@Composable
-private fun TaxpayerType.localizedLabel(): String {
+private fun TaxpayerType.localizedLabel(includeJulyFighter: Boolean): String {
     return when (id) {
         "general" -> localizedText("সাধারণ করদাতা", "General taxpayer")
         "women" -> localizedText("মহিলা করদাতা", "Female taxpayer")
         "senior" -> localizedText("সিনিয়র সিটিজেন (৬৫+)", "Senior citizen (65+)")
-        "disabled" -> localizedText("তৃতীয় লিঙ্গ / প্রতিবন্ধী", "Third gender / disabled")
-        "freedomFighter" -> localizedText(
-            "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা",
-            "War-wounded freedom fighter / injured July fighter"
-        )
+        "thirdGender" -> localizedText("তৃতীয় লিঙ্গ", "Third gender")
+        "disabled" -> localizedText("প্রতিবন্ধী", "Person with disability")
+        "freedomFighter" -> if (includeJulyFighter) {
+            localizedText(
+                "যুদ্ধাহত মুক্তিযোদ্ধা / আহত জুলাই যোদ্ধা",
+                "War-wounded freedom fighter / injured July fighter"
+            )
+        } else {
+            localizedText("যুদ্ধাহত মুক্তিযোদ্ধা", "War-wounded freedom fighter")
+        }
         else -> label
     }
 }
@@ -198,6 +197,22 @@ private fun assessmentTypeDescription(assessmentType: String, selectedMinimumTax
 }
 
 @Composable
+private fun TaxpayerLocation.localizedLabel(): String = when (this) {
+    TaxpayerLocation.DhakaOrChattogramCity -> localizedText(
+        "ঢাকা উত্তর/দক্ষিণ বা চট্টগ্রাম সিটি",
+        "Dhaka North/South or Chattogram City"
+    )
+    TaxpayerLocation.OtherCityCorporation -> localizedText(
+        "অন্যান্য সিটি কর্পোরেশন",
+        "Other city corporation"
+    )
+    TaxpayerLocation.OutsideCityCorporation -> localizedText(
+        "সিটি কর্পোরেশনের বাইরে",
+        "Outside a city corporation"
+    )
+}
+
+@Composable
 private fun InvestmentInputData.localizedTitle(): String {
     return when (type) {
         "dse" -> localizedText("DSE শেয়ার", "DSE shares")
@@ -222,10 +237,18 @@ fun TaxCalculatorScreen(
     val defaultAssessmentType = remember(context) {
         LocalTaxPreferenceStore.getAssessmentType(context)
     }
+    val defaultIncomeYear = remember(context) {
+        LocalTaxPreferenceStore.getIncomeYear(context)
+    }
+    val defaultTaxpayerLocation = remember(context) {
+        LocalTaxPreferenceStore.getTaxpayerLocation(context)
+    }
     var grossSalary by rememberSaveable { mutableStateOf("") }
     var yearlyBonus by rememberSaveable { mutableStateOf("") }
     var selectedType by rememberSaveable { mutableStateOf(defaultTaxpayerType) }
     var selectedAssessmentType by rememberSaveable { mutableStateOf(defaultAssessmentType) }
+    var selectedIncomeYear by rememberSaveable { mutableStateOf(defaultIncomeYear) }
+    var selectedTaxpayerLocationId by rememberSaveable { mutableStateOf(defaultTaxpayerLocation.id) }
     var disabledDependentCount by rememberSaveable { mutableStateOf(0) }
     var adjustableSourceTax by rememberSaveable { mutableStateOf("") }
     var advanceTax by rememberSaveable { mutableStateOf("") }
@@ -237,28 +260,31 @@ fun TaxCalculatorScreen(
     }
 
     val scrollState = rememberScrollState()
-    val taxpayerTypes = remember { TaxDefaults.taxpayerTypes }
-    val currentType = taxpayerTypes.first { it.id == selectedType }
+    val yearRules = remember(selectedIncomeYear) { TaxYearCatalog.find(selectedIncomeYear) }
+    val taxpayerTypes = yearRules.taxpayerTypes
+    val currentType = taxpayerTypes.firstOrNull { it.id == selectedType }
+        ?: taxpayerTypes.first()
+    val taxpayerLocation = TaxpayerLocation.entries.firstOrNull { it.id == selectedTaxpayerLocationId }
+        ?: TaxpayerLocation.DhakaOrChattogramCity
     val effectiveTaxFreeLimit = calculateTaxFreeLimit(
         baseTaxFreeLimit = currentType.taxFreeLimit,
-        disabledDependentCount = disabledDependentCount
+        disabledDependentCount = disabledDependentCount,
+        allowancePerDependent = yearRules.disabledDependentAllowance
     )
-    val minimumTax = if (selectedAssessmentType == LocalTaxPreferenceStore.assessmentNew) {
-        TaxDefaults.newAssessmentMinimumTax
-    } else {
-        TaxDefaults.minimumTax
-    }
+    val minimumTax = yearRules.minimumTax(selectedAssessmentType, taxpayerLocation)
 
     val salaryBreakdown = calculateSalaryBreakdown(
         grossSalary = grossSalary.toLongOrNull() ?: 0L,
-        yearlyBonus = yearlyBonus.toLongOrNull() ?: 0L
+        yearlyBonus = yearlyBonus.toLongOrNull() ?: 0L,
+        rules = yearRules
     )
-    val investmentRebate = calculateInvestmentRebate(investments, salaryBreakdown.taxableIncome)
+    val investmentRebate = calculateInvestmentRebate(investments, salaryBreakdown.taxableIncome, yearRules)
     val result = calculateTax(
         income = salaryBreakdown.taxableIncome,
         taxFreeLimit = effectiveTaxFreeLimit,
         investmentRebate = investmentRebate,
-        minimumTax = minimumTax
+        minimumTax = minimumTax,
+        slabs = yearRules.slabs
     )
     val paymentAdjustment = calculateTaxPaymentAdjustment(
         taxLiability = result.taxAfterRebate,
@@ -292,11 +318,14 @@ fun TaxCalculatorScreen(
         topBar = {
             AppTopBar(
                 onBack = onBack,
+                yearRules = yearRules,
                 onReset = {
                     grossSalary = ""
                     yearlyBonus = ""
                     selectedType = defaultTaxpayerType
                     selectedAssessmentType = defaultAssessmentType
+                    selectedIncomeYear = defaultIncomeYear
+                    selectedTaxpayerLocationId = defaultTaxpayerLocation.id
                     disabledDependentCount = 0
                     adjustableSourceTax = ""
                     advanceTax = ""
@@ -320,12 +349,13 @@ fun TaxCalculatorScreen(
                 .imePadding()
         ) {
             if (showInfoDialog) {
-                TaxInfoDialog(onDismiss = { showInfoDialog = false })
+                TaxInfoDialog(yearRules = yearRules, onDismiss = { showInfoDialog = false })
             }
 
             // Fixed Header
             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 CalculatorOverviewCard(
+                    yearRules = yearRules,
                     currentType = currentType,
                     salaryBreakdown = salaryBreakdown,
                     summary = summary,
@@ -341,10 +371,23 @@ fun TaxCalculatorScreen(
                     .weight(1f)
                     .nestedScroll(hideKeyboardOnScrollConnection)
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(
+                        PaddingValues(
+                            start = 16.dp,
+                            top = 4.dp,
+                            end = 16.dp,
+                            bottom = FloatingBottomBarSafePadding
+                        )
+                    ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 CalculatorInputHub(
+                    yearRules = yearRules,
+                    selectedIncomeYear = selectedIncomeYear,
+                    onIncomeYearChange = {
+                        selectedIncomeYear = it
+                        LocalTaxPreferenceStore.setIncomeYear(context, it)
+                    },
                     taxpayerTypes = taxpayerTypes,
                     selectedType = selectedType,
                     onTypeSelect = {
@@ -361,6 +404,11 @@ fun TaxCalculatorScreen(
                         LocalTaxPreferenceStore.setAssessmentType(context, it)
                     },
                     selectedMinimumTax = minimumTax,
+                    taxpayerLocation = taxpayerLocation,
+                    onTaxpayerLocationChange = {
+                        selectedTaxpayerLocationId = it.id
+                        LocalTaxPreferenceStore.setTaxpayerLocation(context, it)
+                    },
                     grossSalary = grossSalary,
                     yearlyBonus = yearlyBonus,
                     onGrossSalaryChange = { grossSalary = it },
@@ -392,7 +440,8 @@ fun TaxCalculatorScreen(
                     InvestmentSummaryCard(
                         taxableIncome = salaryBreakdown.taxableIncome,
                         investments = investments,
-                        earnedRebate = investmentRebate
+                        earnedRebate = investmentRebate,
+                        yearRules = yearRules
                     )
                 }
 
@@ -411,6 +460,7 @@ fun TaxCalculatorScreen(
 @Composable
 private fun AppTopBar(
     onBack: (() -> Unit)?,
+    yearRules: TaxYearRules,
     onReset: () -> Unit,
     onInfoClick: () -> Unit
 ) {
@@ -454,7 +504,10 @@ private fun AppTopBar(
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
-                    text = localizedText("করবর্ষ ${TaxDefaults.taxYearLabel}", "Tax year ${taxYearLabel()}"),
+                    text = localizedText(
+                        "আয়বর্ষ ${yearRules.incomeYear} · করবর্ষ ${yearRules.assessmentYear}",
+                        "Income year ${yearRules.incomeYear} · Tax year ${yearRules.assessmentYear}"
+                    ),
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
                     color = CalculatorMuted,
@@ -539,6 +592,7 @@ private fun ExpandableContent(
 }
 @Composable
 private fun CalculatorOverviewCard(
+    yearRules: TaxYearRules,
     currentType: TaxpayerType,
     salaryBreakdown: SalaryBreakdown,
     summary: TaxSummary,
@@ -566,7 +620,7 @@ private fun CalculatorOverviewCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(localizedText("সারসংক্ষেপ", "Overview"), fontSize = 11.sp, lineHeight = 13.sp, color = CalculatorMuted, fontFamily = TiroBanglaFontFamily)
                     Text(
-                        currentType.localizedLabel(),
+                        currentType.localizedLabel(yearRules.incomeYear == TaxYearCatalog.current.incomeYear),
                         fontSize = 13.sp,
                         lineHeight = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -701,6 +755,9 @@ private fun HeroMetricTile(
 
 @Composable
 private fun CalculatorInputHub(
+    yearRules: TaxYearRules,
+    selectedIncomeYear: String,
+    onIncomeYearChange: (String) -> Unit,
     taxpayerTypes: List<TaxpayerType>,
     selectedType: String,
     onTypeSelect: (String) -> Unit,
@@ -709,6 +766,8 @@ private fun CalculatorInputHub(
     assessmentType: String,
     onAssessmentTypeChange: (String) -> Unit,
     selectedMinimumTax: Double,
+    taxpayerLocation: TaxpayerLocation,
+    onTaxpayerLocationChange: (TaxpayerLocation) -> Unit,
     grossSalary: String,
     yearlyBonus: String,
     onGrossSalaryChange: (String) -> Unit,
@@ -718,6 +777,11 @@ private fun CalculatorInputHub(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        TaxYearSelectionCard(
+            selectedIncomeYear = selectedIncomeYear,
+            onIncomeYearChange = onIncomeYearChange
+        )
+
         // Taxpayer type card — standalone, full bleed LazyRow
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -743,6 +807,7 @@ private fun CalculatorInputHub(
                     items(taxpayerTypes, key = { it.id }) { type ->
                         TaxpayerTypeItem(
                             type = type,
+                            includeJulyFighter = yearRules.incomeYear == TaxYearCatalog.current.incomeYear,
                             isSelected = type.id == selectedType,
                             onSelect = { onTypeSelect(type.id) },
                         )
@@ -756,9 +821,12 @@ private fun CalculatorInputHub(
         }
 
         TaxRuleSelectionCard(
+            yearRules = yearRules,
             assessmentType = assessmentType,
             onAssessmentTypeChange = onAssessmentTypeChange,
-            selectedMinimumTax = selectedMinimumTax
+            selectedMinimumTax = selectedMinimumTax,
+            taxpayerLocation = taxpayerLocation,
+            onTaxpayerLocationChange = onTaxpayerLocationChange
         )
 
         // Income input card — separate
@@ -773,6 +841,75 @@ private fun CalculatorInputHub(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 GrossSalaryInput(grossSalary, yearlyBonus, onGrossSalaryChange, onYearlyBonusChange)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaxYearSelectionCard(
+    selectedIncomeYear: String,
+    onIncomeYearChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp)) {
+                SectionLabel(
+                    localizedText("আয়বর্ষ নির্বাচন", "Select Income Year"),
+                    localizedText(
+                        "প্রতিটি বছরের নিজস্ব করমুক্ত সীমা, স্ল্যাব ও রেয়াত প্রযোজ্য হবে",
+                        "The selected year's thresholds, slabs, and rebates will be applied"
+                    )
+                )
+            }
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(TaxYearCatalog.supportedYears, key = { it.id }) { rules ->
+                    val selected = rules.incomeYear == selectedIncomeYear
+                    Surface(
+                        modifier = Modifier
+                            .width(118.dp)
+                            .noRippleClickable { onIncomeYearChange(rules.incomeYear) },
+                        color = if (selected) CalculatorSuccess.copy(alpha = 0.08f) else CalculatorSurfaceAlt,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(
+                            if (selected) 2.dp else 1.dp,
+                            if (selected) CalculatorSuccess else CalculatorBorder
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                localizedText("আয়বর্ষ ${rules.incomeYear}", "Income ${rules.incomeYear}"),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) CalculatorSuccess else CalculatorInk,
+                                fontFamily = TiroBanglaFontFamily,
+                                lineHeight = 14.sp
+                            )
+                            Text(
+                                localizedText("করবর্ষ ${rules.assessmentYear}", "Tax ${rules.assessmentYear}"),
+                                fontSize = 10.sp,
+                                color = CalculatorMuted,
+                                fontFamily = TiroBanglaFontFamily,
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -869,9 +1006,12 @@ private fun DependentCountButton(
 }
 @Composable
 private fun TaxRuleSelectionCard(
+    yearRules: TaxYearRules,
     assessmentType: String,
     onAssessmentTypeChange: (String) -> Unit,
-    selectedMinimumTax: Double
+    selectedMinimumTax: Double,
+    taxpayerLocation: TaxpayerLocation,
+    onTaxpayerLocationChange: (TaxpayerLocation) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -884,32 +1024,51 @@ private fun TaxRuleSelectionCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             SectionLabel(
-                localizedText("ন্যূনতম করের ধরন", "Minimum Tax Status"),
-                localizedText(
-                    "বিদ্যমান করদাতার জন্য ৫,০০০; নতুন করদাতার জন্য ১,০০০ টাকা",
-                    "BDT 5,000 for existing taxpayers; BDT 1,000 for new taxpayers"
-                )
+                if (yearRules.supportsNewTaxpayerMinimum) {
+                    localizedText("ন্যূনতম করের ধরন", "Minimum Tax Status")
+                } else {
+                    localizedText("করদাতার অবস্থান", "Taxpayer Location")
+                },
+                if (yearRules.supportsNewTaxpayerMinimum) {
+                    localizedText(
+                        "বিদ্যমান করদাতার জন্য ৫,০০০; নতুন করদাতার জন্য ১,০০০ টাকা",
+                        "BDT 5,000 for existing taxpayers; BDT 1,000 for new taxpayers"
+                    )
+                } else {
+                    localizedText(
+                        "${yearRules.assessmentYear} করবর্ষে অবস্থান অনুযায়ী ন্যূনতম কর নির্বাচন করুন",
+                        "Select the location-based minimum tax for tax year ${yearRules.assessmentYear}"
+                    )
+                }
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SelectableRuleRow(
-                    title = assessmentTypeLabel(LocalTaxPreferenceStore.assessmentRegular),
-                    subtitle = localizedText(
-                        "সকল এলাকার জন্য ন্যূনতম কর ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())}",
-                        "Minimum tax BDT ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())} for all locations"
-                    ),
-                    selected = assessmentType == LocalTaxPreferenceStore.assessmentRegular,
-                    onClick = { onAssessmentTypeChange(LocalTaxPreferenceStore.assessmentRegular) }
-                )
-                SelectableRuleRow(
-                    title = assessmentTypeLabel(LocalTaxPreferenceStore.assessmentNew),
-                    subtitle = localizedText(
-                        "নতুন করদাতার ন্যূনতম কর ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())}",
-                        "Minimum tax for a new taxpayer is BDT ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())}"
-                    ),
-                    selected = assessmentType == LocalTaxPreferenceStore.assessmentNew,
-                    onClick = { onAssessmentTypeChange(LocalTaxPreferenceStore.assessmentNew) }
-                )
+                if (yearRules.supportsNewTaxpayerMinimum) {
+                    SelectableRuleRow(
+                        title = assessmentTypeLabel(LocalTaxPreferenceStore.assessmentRegular),
+                        subtitle = localizedText("সকল এলাকার জন্য ন্যূনতম কর ৫,০০০", "Minimum tax BDT 5,000 for all locations"),
+                        selected = assessmentType == LocalTaxPreferenceStore.assessmentRegular,
+                        onClick = { onAssessmentTypeChange(LocalTaxPreferenceStore.assessmentRegular) }
+                    )
+                    SelectableRuleRow(
+                        title = assessmentTypeLabel(LocalTaxPreferenceStore.assessmentNew),
+                        subtitle = localizedText("নতুন করদাতার ন্যূনতম কর ১,০০০", "Minimum tax for a new taxpayer is BDT 1,000"),
+                        selected = assessmentType == LocalTaxPreferenceStore.assessmentNew,
+                        onClick = { onAssessmentTypeChange(LocalTaxPreferenceStore.assessmentNew) }
+                    )
+                } else {
+                    TaxpayerLocation.entries.forEach { location ->
+                        SelectableRuleRow(
+                            title = location.localizedLabel(),
+                            subtitle = localizedText(
+                                "ন্যূনতম কর ${formatBengaliNumber(location.minimumTax.toLong())} টাকা",
+                                "Minimum tax BDT ${formatBengaliNumber(location.minimumTax.toLong())}"
+                            ),
+                            selected = taxpayerLocation == location,
+                            onClick = { onTaxpayerLocationChange(location) }
+                        )
+                    }
+                }
             }
 
             Surface(
@@ -917,7 +1076,14 @@ private fun TaxRuleSelectionCard(
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    assessmentTypeDescription(assessmentType, selectedMinimumTax),
+                    if (yearRules.supportsNewTaxpayerMinimum) {
+                        assessmentTypeDescription(assessmentType, selectedMinimumTax)
+                    } else {
+                        localizedText(
+                            "প্রযোজ্য ন্যূনতম কর: ${formatBengaliNumber(selectedMinimumTax.toLong())} টাকা",
+                            "Applicable minimum tax: BDT ${formatBengaliNumber(selectedMinimumTax.toLong())}"
+                        )
+                    },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
@@ -984,12 +1150,12 @@ private fun SelectableRuleRow(
 private fun SectionLabel(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, fontSize = 15.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = CalculatorInk, fontFamily = TiroBanglaFontFamily)
-        Text(subtitle, fontSize = 11.sp,lineHeight = 16.sp, color = CalculatorMutedSoft, fontFamily = TiroBanglaFontFamily)
+        Text(subtitle, fontSize = 11.sp,lineHeight = 14.sp, color = CalculatorMutedSoft, fontFamily = TiroBanglaFontFamily)
     }
 }
 
 @Composable
-private fun TaxInfoDialog(onDismiss: () -> Unit) {
+private fun TaxInfoDialog(yearRules: TaxYearRules, onDismiss: () -> Unit) {
    Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(28.dp),
@@ -1012,13 +1178,30 @@ private fun TaxInfoDialog(onDismiss: () -> Unit) {
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     BulletInfoRow(localizedText("মাসিক মোট বেতন × ১২ + বার্ষিক বোনাস = মোট বার্ষিক আয়।", "Monthly gross salary × 12 + yearly bonus = total annual income."))
-                    BulletInfoRow(localizedText("বেতন আয়ের ছাড় হিসেবে মোট আয়ের ১/৩ অংশ অথবা ${formatBengaliNumber(TaxDefaults.maxTotalExemption)} টাকা, যেটি কম, বাদ দেওয়া হয়।", "As salary exemption, the lower of 1/3 of total income or BDT ${formatBengaliNumber(TaxDefaults.maxTotalExemption)} is deducted."))
+                    BulletInfoRow(
+                        if (yearRules.salaryExemptionCap > 0L) localizedText(
+                            "বেতন আয়ের ছাড় হিসেবে মোট আয়ের ১/৩ অংশ অথবা ${formatBengaliNumber(yearRules.salaryExemptionCap)} টাকা, যেটি কম, বাদ দেওয়া হয়।",
+                            "As salary exemption, the lower of 1/3 of total income or BDT ${formatBengaliNumber(yearRules.salaryExemptionCap)} is deducted."
+                        ) else localizedText(
+                            "এই পুরোনো আয়বর্ষে বাড়িভাড়া, চিকিৎসা ও যাতায়াত ভাতার তৎকালীন পৃথক সীমা অনুযায়ী বেতন ছাড় হিসাব করা হয়।",
+                            "For this older income year, salary exemption uses the then-applicable separate limits for house rent, medical, and conveyance allowances."
+                        )
+                    )
                     BulletInfoRow(localizedText("মোট বার্ষিক আয় - বেতন ছাড় = নিট করযোগ্য আয়।", "Total annual income - salary exemption = net taxable income."))
                     BulletInfoRow(localizedText("নির্বাচিত করদাতা শ্রেণির করমুক্ত সীমা পর্যন্ত কর শূন্য ধরা হয়।", "Tax is zero up to the selected taxpayer category's tax-free limit."))
-                    BulletInfoRow(localizedText("প্রতিবন্ধী সন্তান/পোষ্য প্রতি করমুক্ত সীমায় আরও ${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)} টাকা যোগ হয়। বাবা-মা উভয়েই করদাতা হলে যেকোনো একজন এই সুবিধা নিতে পারবেন।", "An additional BDT ${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)} tax-free allowance applies for each disabled child/dependent. If both parents are taxpayers, only one may claim it."))
-                    BulletInfoRow(localizedText("আয়বর্ষ ${TaxDefaults.incomeYearLabel} এবং অ্যাসেসমেন্ট ইয়ার ${TaxDefaults.assessmentYearLabel} অনুযায়ী কর ধাপ: পরবর্তী ৩,০০,০০০ টাকায় ১০%, পরবর্তী ৪,০০,০০০ টাকায় ১৫%, পরবর্তী ৫,০০,০০০ টাকায় ২০%, পরবর্তী ২০,০০,০০০ টাকায় ২৫%, এরপর ৩০%।", "For income year ${incomeYearLabel()} and assessment year ${assessmentYearLabel()}, slab rates are: next BDT 300,000 at 10%, next BDT 400,000 at 15%, next BDT 500,000 at 20%, next BDT 2,000,000 at 25%, then 30%."))
-                    BulletInfoRow(localizedText("বিনিয়োগ রিবেট হিসেবে করযোগ্য আয়ের ৩%, প্রকৃত যোগ্য বিনিয়োগের ১০%, অথবা ৭.৫ লাখ টাকার মধ্যে কমটি ধরা হয়।", "Investment rebate is the lower of 3% of taxable income, 10% of actual eligible investment, or BDT 750,000."))
-                    BulletInfoRow(localizedText("চূড়ান্ত প্রদেয় কর = ধাপ অনুযায়ী মোট কর - বিনিয়োগ রিবেট। করমুক্ত সীমা ছাড়ালে সকল এলাকার জন্য ন্যূনতম কর ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())} টাকা; নতুন করদাতার ক্ষেত্রে ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())} টাকা।", "Final payable tax = slab tax - investment rebate. After crossing the tax-free limit, minimum tax is BDT ${formatBengaliNumber(TaxDefaults.minimumTax.toLong())} for all locations, or BDT ${formatBengaliNumber(TaxDefaults.newAssessmentMinimumTax.toLong())} for a new taxpayer."))
+                    BulletInfoRow(localizedText("প্রতিবন্ধী সন্তান/পোষ্য প্রতি করমুক্ত সীমায় আরও ${formatBengaliNumber(yearRules.disabledDependentAllowance)} টাকা যোগ হয়। বাবা-মা উভয়েই করদাতা হলে যেকোনো একজন এই সুবিধা নিতে পারবেন।", "An additional BDT ${formatBengaliNumber(yearRules.disabledDependentAllowance)} tax-free allowance applies for each disabled child/dependent. If both parents are taxpayers, only one may claim it."))
+                    BulletInfoRow(localizedText(
+                        "আয়বর্ষ ${yearRules.incomeYear} এবং করবর্ষ ${yearRules.assessmentYear}-এর নির্ধারিত স্ল্যাব ব্যবহার করা হয়।",
+                        "The official slabs for income year ${yearRules.incomeYear} and tax year ${yearRules.assessmentYear} are used."
+                    ))
+                    BulletInfoRow(localizedText(
+                        "বিনিয়োগ রিবেট হিসেবে করযোগ্য আয়ের ${formatBengaliNumber((yearRules.incomeBasedInvestmentRebateRate * 100).toLong())}%, প্রকৃত যোগ্য বিনিয়োগের ${formatBengaliNumber((yearRules.investmentRebateRate * 100).toLong())}%, অথবা ${formatBengaliNumber(yearRules.maxInvestmentRebate.toLong())} টাকার মধ্যে কমটি ধরা হয়।",
+                        "Investment rebate is the lower of ${(yearRules.incomeBasedInvestmentRebateRate * 100).toInt()}% of taxable income, ${(yearRules.investmentRebateRate * 100).toInt()}% of actual eligible investment, or BDT ${formatBengaliNumber(yearRules.maxInvestmentRebate.toLong())}."
+                    ))
+                    BulletInfoRow(localizedText(
+                        "চূড়ান্ত প্রদেয় কর = ধাপ অনুযায়ী মোট কর - বিনিয়োগ রিবেট। নির্বাচিত বছর ও করদাতার অবস্থান/অবস্থা অনুযায়ী ন্যূনতম কর প্রযোজ্য হয়।",
+                        "Final payable tax = slab tax - investment rebate. Minimum tax follows the selected year's taxpayer status or location rule."
+                    ))
                     BulletInfoRow(localizedText("অবশিষ্ট প্রদেয় কর = রিবেটের পর করদায় - সমন্বয়যোগ্য উৎসে কর - পরিশোধিত অগ্রিম কর। অতিরিক্ত credit আলাদাভাবে দেখানো হয়।", "Remaining payable tax = tax liability after rebate - adjustable source tax - advance tax paid. Any excess credit is shown separately."))
                     BulletInfoRow(localizedText("সব হিসাব ডিভাইসেই হয়; আপনার ইনপুট কোনো সার্ভার বা ডেটাবেসে পাঠানো বা সংরক্ষণ করা হয় না।", "All calculations happen on device; your inputs are not sent to or saved on any server or database."))
                 }
@@ -1334,16 +1517,17 @@ private fun InvestmentInputSection(
 private fun InvestmentSummaryCard(
     taxableIncome: Long,
     investments: List<InvestmentInputData>,
-    earnedRebate: Double
+    earnedRebate: Double,
+    yearRules: TaxYearRules
 ) {
     val totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
     val maxRebateLimit = minOf(
-        taxableIncome * TaxDefaults.incomeBasedInvestmentRebateRate,
-        TaxDefaults.maxInvestmentRebate
+        taxableIncome * yearRules.incomeBasedInvestmentRebateRate,
+        yearRules.maxInvestmentRebate
     )
     
     // Max investment required to get max rebate based on the current rebate rate.
-    val maxInvestmentRequired = (maxRebateLimit / TaxDefaults.investmentRebateRate).toLong()
+    val maxInvestmentRequired = (maxRebateLimit / yearRules.investmentRebateRate).toLong()
     val progress = if (maxRebateLimit > 0) (earnedRebate / maxRebateLimit).toFloat().coerceIn(0f, 1f) else 0f
     val remainingInvestmentNeeded = maxOf(0L, maxInvestmentRequired - totalInvestment)
 
@@ -1773,13 +1957,14 @@ private fun TaxBreakdownRow(slab: TaxBreakdown) {
 @Composable
 private fun TaxpayerTypeItem(
     type: TaxpayerType,
+    includeJulyFighter: Boolean,
     isSelected: Boolean,
     onSelect: () -> Unit,
 ) {
     Surface(
         modifier = Modifier
             .width(112.dp)
-            .height(88.dp)
+            .height(84.dp)
             .noRippleClickable(onClick = onSelect),
         color = CalculatorSurfaceAlt,
         shape = RoundedCornerShape(10.dp),
@@ -1800,7 +1985,7 @@ private fun TaxpayerTypeItem(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(10.dp),
+                    .padding(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -1824,7 +2009,7 @@ private fun TaxpayerTypeItem(
                 Spacer(modifier = Modifier.height(5.dp))
 
                 Text(
-                    type.localizedLabel(),
+                    type.localizedLabel(includeJulyFighter),
                     fontSize = 10.sp,
                     lineHeight = 10.sp,
                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
