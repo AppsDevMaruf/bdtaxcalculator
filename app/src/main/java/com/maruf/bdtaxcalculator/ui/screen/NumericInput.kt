@@ -1,7 +1,8 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
 internal const val MaxMoneyInputLength = 15
-internal const val MaxDisabledDependentCount = 20
+// Practical UI safeguard only; NBR does not prescribe a maximum dependent count.
+internal const val MaxDisabledDependentCount = 10
 internal const val TinInputLength = 12
 
 internal fun normalizeAuditTinInput(input: String): String {

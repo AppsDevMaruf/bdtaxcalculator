@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -45,20 +46,26 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -136,7 +143,7 @@ import kotlinx.coroutines.delay
 private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
     save = { list -> list.associate { it.type to it.amount } },
     restore = { map ->
-        TaxDefaults.investmentOptions.map {
+        TaxDefaults.investmentOptions.filter { map.containsKey(it.type) }.map {
             it.copy(amount = (map[it.type] as? String) ?: "")
         }
     }
@@ -215,11 +222,64 @@ private fun TaxpayerLocation.localizedLabel(): String = when (this) {
 @Composable
 private fun InvestmentInputData.localizedTitle(): String {
     return when (type) {
-        "dse" -> localizedText("DSE শেয়ার", "DSE shares")
-        "sanchaypatra" -> localizedText("সঞ্চয়পত্র", "Savings certificates")
-        "dps" -> localizedText("DPS (ডিপোজিট পেনশন স্কিম)", "DPS (Deposit Pension Scheme)")
-        "mutual" -> localizedText("মিউচুয়াল ফান্ড", "Mutual fund")
-        "insurance" -> localizedText("লাইফ ইন্স্যুরেন্স", "Life insurance")
+        "gpf" -> localizedText("বার্ষিক GPF-এ নিজস্ব জমা", "Annual own contribution to GPF")
+        "recognized_pf" -> localizedText(
+            "স্বীকৃত ভবিষ্য তহবিলে কর্মী ও নিয়োগকর্তার চাঁদা",
+            "Employee and employer contribution to recognized PF"
+        )
+        "benevolent_group_insurance" -> localizedText(
+            "কল্যাণ তহবিল / অনুমোদিত গোষ্ঠী বিমা",
+            "Benevolent fund / approved group insurance"
+        )
+        "superannuation" -> localizedText(
+            "অনুমোদিত সুপারএনুয়েশন ফান্ডে চাঁদা",
+            "Contribution to approved superannuation fund"
+        )
+        "universal_pension" -> localizedText(
+            "সর্বজনীন পেনশন স্কিমে চাঁদা",
+            "Universal Pension Scheme contribution"
+        )
+        "insurance" -> localizedText(
+            "জীবন বিমা প্রিমিয়াম / ডেফার্ড অ্যানুইটি",
+            "Life insurance premium / deferred annuity"
+        )
+        "dps" -> localizedText(
+            "DPS (সর্বোচ্চ রেয়াতযোগ্য ৳১,২০,০০০)",
+            "DPS (eligible up to BDT 120,000)"
+        )
+        "sanchaypatra" -> localizedText(
+            "সরকারি সিকিউরিটিজ / সঞ্চয়পত্র (সর্বোচ্চ ৳৫,০০,০০০)",
+            "Government securities / savings certificates (up to BDT 500,000)"
+        )
+        "dse" -> localizedText(
+            "তালিকাভুক্ত শেয়ার / স্টক / ডিবেঞ্চার",
+            "Listed shares / stocks / debentures"
+        )
+        "mutual" -> localizedText(
+            "ইউনিট / মিউচুয়াল ফান্ড / ETF (সর্বোচ্চ ৳৫,০০,০০০)",
+            "Units / mutual funds / ETF (up to BDT 500,000)"
+        )
+        "zakat" -> localizedText("যাকাত তহবিলে দান", "Donation to Zakat Fund")
+        "charitable_hospital" -> localizedText(
+            "অনুমোদিত দাতব্য হাসপাতালে দান",
+            "Donation to an approved charitable hospital"
+        )
+        "disability_welfare" -> localizedText(
+            "প্রতিবন্ধী কল্যাণ প্রতিষ্ঠানে দান",
+            "Donation to an approved disability-welfare organization"
+        )
+        "benevolent_education" -> localizedText(
+            "অনুমোদিত জনকল্যাণমূলক / শিক্ষা প্রতিষ্ঠানে দান",
+            "Donation to an approved philanthropic / educational institution"
+        )
+        "liberation_war" -> localizedText(
+            "মুক্তিযুদ্ধ স্মৃতি সংরক্ষণ প্রতিষ্ঠানে অনুদান",
+            "Donation to a national Liberation War memorial institution"
+        )
+        "sro_approved_donation" -> localizedText(
+            "অন্যান্য SRO-অনুমোদিত দান / অনুদান",
+            "Other SRO-approved donation / contribution"
+        )
         else -> title
     }
 }
@@ -256,7 +316,7 @@ fun TaxCalculatorScreen(
     var hasLoggedTaxCalculation by rememberSaveable { mutableStateOf(false) }
     var hasLoggedTaxCreditUsage by rememberSaveable { mutableStateOf(false) }
     var investments by rememberSaveable(stateSaver = investmentSaver) {
-        mutableStateOf(TaxDefaults.investmentOptions)
+        mutableStateOf(emptyList())
     }
 
     val scrollState = rememberScrollState()
@@ -329,7 +389,7 @@ fun TaxCalculatorScreen(
                     disabledDependentCount = 0
                     adjustableSourceTax = ""
                     advanceTax = ""
-                    investments = TaxDefaults.investmentOptions
+                    investments = emptyList()
                 },
                 onInfoClick = { showInfoDialog = true }
             )
@@ -429,10 +489,19 @@ fun TaxCalculatorScreen(
 
                 InvestmentInputSection(
                     investments = investments,
+                    onInvestmentAdd = { type ->
+                        val option = TaxDefaults.investmentOptions.firstOrNull { it.type == type }
+                        if (option != null && investments.none { it.type == type }) {
+                            investments = investments + option
+                        }
+                    },
                     onInvestmentChange = { type, value ->
                         investments = investments.map {
                             if (it.type == type) it.copy(amount = value) else it
                         }
+                    },
+                    onInvestmentRemove = { type ->
+                        investments = investments.filterNot { it.type == type }
                     }
                 )
 
@@ -946,8 +1015,8 @@ private fun DisabledDependentAllowanceRow(
                 )
                 Text(
                     localizedText(
-                        "প্রতি জনে করমুক্ত সীমা +${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)}",
-                        "+BDT ${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)} tax-free limit each"
+                        "প্রতি জনে +${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)} • অ্যাপে সর্বোচ্চ ${formatBengaliNumber(MaxDisabledDependentCount.toLong())} জন",
+                        "+BDT ${formatBengaliNumber(TaxDefaults.disabledDependentAllowance)} each • Up to $MaxDisabledDependentCount entries"
                     ),
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
@@ -1270,55 +1339,63 @@ fun CurrencyInputField(
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
-    leading: @Composable (() -> Unit)? = null
+    leading: @Composable (() -> Unit)? = null,
+    leadingAction: @Composable (() -> Unit)? = null
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, fontSize = 12.sp, lineHeight = 2.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
-        Surface(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = CalculatorSurfaceAlt,
-            border = BorderStroke(1.dp, CalculatorBorder)
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            leadingAction?.invoke()
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                color = CalculatorSurfaceAlt,
+                border = BorderStroke(1.dp, CalculatorBorder)
             ) {
-                if (leading != null) {
-                    leading()
-                } else {
-                    Text(localizedText("৳", "BDT"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = TiroBanglaFontFamily)
-                }
-                BasicTextField(
-                    value = value,
-                    onValueChange = { onValueChange(normalizeNumericInput(it)) },
-                    modifier = Modifier.weight(1f),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = TiroBanglaFontFamily
-                    ),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        }
-                    ),
-                    decorationBox = { innerTextField ->
-                        if (value.isEmpty()) Text(placeholder, color = HomeNavInactive, fontSize = 16.sp, fontFamily = TiroBanglaFontFamily)
-                        innerTextField()
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (leading != null) {
+                        leading()
+                    } else {
+                        Text(localizedText("৳", "BDT"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = TiroBanglaFontFamily)
                     }
-                )
+                    BasicTextField(
+                        value = value,
+                        onValueChange = { onValueChange(normalizeNumericInput(it)) },
+                        modifier = Modifier.weight(1f),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = TiroBanglaFontFamily
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            }
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (value.isEmpty()) Text(placeholder, color = HomeNavInactive, fontSize = 16.sp, fontFamily = TiroBanglaFontFamily)
+                            innerTextField()
+                        }
+                    )
+                }
             }
         }
     }
@@ -1453,11 +1530,20 @@ private fun YearlyItem(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun InvestmentInputSection(
     investments: List<InvestmentInputData>,
-    onInvestmentChange: (String, String) -> Unit
+    onInvestmentAdd: (String) -> Unit,
+    onInvestmentChange: (String, String) -> Unit,
+    onInvestmentRemove: (String) -> Unit
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
+    var showTypeSheet by rememberSaveable { mutableStateOf(false) }
+    var typeSearchQuery by rememberSaveable { mutableStateOf("") }
+    val typeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val availableOptions = TaxDefaults.investmentOptions.filter { option ->
+        investments.none { it.type == option.type }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1480,11 +1566,18 @@ private fun InvestmentInputSection(
             ) {
                 SectionLabel(
                     localizedText("বিনিয়োগ রেয়াত", "Investment Rebate"),
-                    localizedText("আপনার বিনিয়োগ তথ্য দিন", "Enter your investment details")
+                    localizedText(
+                        "বিনিয়োগের তথ্য দিন",
+                        "Enter investment details"
+                    )
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        if (isExpanded) localizedText("বন্ধ করুন", "Collapse") else localizedText("বিনিয়োগ যোগ করুন", "Add Investment"),
+                        if (isExpanded) {
+                            localizedText("বন্ধ করুন", "Collapse")
+                        } else {
+                            localizedText("বিনিয়োগ যোগ করুন", "Add Investment")
+                        },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -1504,8 +1597,319 @@ private fun InvestmentInputSection(
                             value = investment.amount,
                             onValueChange = { onInvestmentChange(investment.type, it) },
                             label = investment.localizedTitle(),
-                            placeholder = "0"
+                            placeholder = "0",
+                            leadingAction = {
+                                Surface(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .noRippleClickable {
+                                            onInvestmentRemove(investment.type)
+                                        },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = CalculatorDanger.copy(alpha = 0.10f),
+                                    border = BorderStroke(1.dp, CalculatorDanger.copy(alpha = 0.28f))
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = localizedText("খাতটি মুছুন", "Remove item"),
+                                            modifier = Modifier.size(19.dp),
+                                            tint = CalculatorDanger
+                                        )
+                                    }
+                                }
+                            }
                         )
+                    }
+
+                    if (availableOptions.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .noRippleClickable { showTypeSheet = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = CalculatorSurfaceAlt,
+                            border = BorderStroke(1.dp, CalculatorBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    if (investments.isEmpty()) {
+                                        localizedText("বিনিয়োগের খাত নির্বাচন করুন", "Select an investment type")
+                                    } else {
+                                        localizedText("আরেকটি বিনিয়োগের খাত যোগ করুন", "Add another investment type")
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CalculatorFieldText,
+                                    fontFamily = TiroBanglaFontFamily
+                                )
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            localizedText(
+                                "সব বিনিয়োগের খাত যোগ করা হয়েছে।",
+                                "All investment types have been added."
+                            ),
+                            fontSize = 12.sp,
+                            color = CalculatorSuccess,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = TiroBanglaFontFamily
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showTypeSheet) {
+        InvestmentTypeBottomSheet(
+            investments = investments,
+            searchQuery = typeSearchQuery,
+            sheetState = typeSheetState,
+            onSearchQueryChange = { typeSearchQuery = it },
+            onDismiss = {
+                showTypeSheet = false
+                typeSearchQuery = ""
+            },
+            onInvestmentSelect = { type ->
+                onInvestmentAdd(type)
+                showTypeSheet = false
+                typeSearchQuery = ""
+            }
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun InvestmentTypeBottomSheet(
+    investments: List<InvestmentInputData>,
+    searchQuery: String,
+    sheetState: androidx.compose.material3.SheetState,
+    onSearchQueryChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onInvestmentSelect: (String) -> Unit
+) {
+    val selectedTypes = investments.mapTo(mutableSetOf()) { it.type }
+    val groups = listOf(
+        localizedText("পেনশন ও তহবিল", "Pension & funds") to setOf(
+            "gpf", "recognized_pf", "benevolent_group_insurance", "superannuation", "universal_pension"
+        ),
+        localizedText("বিমা", "Insurance") to setOf("insurance"),
+        localizedText("সঞ্চয় ও সিকিউরিটিজ", "Savings & securities") to setOf(
+            "dps", "sanchaypatra", "dse", "mutual"
+        ),
+        localizedText("অনুমোদিত দান ও অনুদান", "Approved donations") to setOf(
+            "zakat", "charitable_hospital", "disability_welfare", "benevolent_education",
+            "liberation_war", "sro_approved_donation"
+        )
+    )
+    val query = searchQuery.trim()
+    val titledOptions = TaxDefaults.investmentOptions.map { it to it.localizedTitle() }
+    val visibleGroups = groups.mapNotNull { (groupTitle, types) ->
+        val matches = titledOptions.filter { (option, title) ->
+            option.type in types && (
+                query.isBlank() ||
+                    title.contains(query, ignoreCase = true) ||
+                    option.title.contains(query, ignoreCase = true) ||
+                    option.type.contains(query, ignoreCase = true)
+                )
+        }
+        if (matches.isEmpty()) null else groupTitle to matches
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CalculatorPanel,
+        dragHandle = {
+            Surface(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 8.dp)
+                    .size(width = 48.dp, height = 5.dp),
+                shape = RoundedCornerShape(999.dp),
+                color = CalculatorBorder
+            ) {}
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    localizedText("বিনিয়োগের খাত নির্বাচন করুন", "Select an investment type"),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalculatorInk,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    localizedText(
+                        "একটি খাত বেছে নিলে পরিমাণ লেখার ঘর যোগ হবে",
+                        "Choose a type to add its amount field"
+                    ),
+                    fontSize = 12.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = CalculatorSurfaceAlt,
+                    border = BorderStroke(1.dp, CalculatorBorder)
+                ) {
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = CalculatorFieldText,
+                            fontFamily = TiroBanglaFontFamily
+                        ),
+                        cursorBrush = Brush.verticalGradient(
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary)
+                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        decorationBox = { innerTextField ->
+                            Row(
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(19.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Box(modifier = Modifier.weight(1f)) {
+                                    if (searchQuery.isBlank()) {
+                                        Text(
+                                            localizedText("খাত খুঁজুন", "Search investment types"),
+                                            color = CalculatorMutedSoft,
+                                            fontSize = 13.sp,
+                                            fontFamily = TiroBanglaFontFamily
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                                if (searchQuery.isNotBlank()) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = localizedText("সার্চ মুছুন", "Clear search"),
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .noRippleClickable { onSearchQueryChange("") },
+                                        tint = CalculatorMuted
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (visibleGroups.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        localizedText("কোনো খাত পাওয়া যায়নি", "No investment type found"),
+                        color = CalculatorMuted,
+                        fontFamily = TiroBanglaFontFamily
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 520.dp),
+                    contentPadding = PaddingValues(bottom = 18.dp)
+                ) {
+                    visibleGroups.forEach { (groupTitle, options) ->
+                        item(key = "header_$groupTitle") {
+                            Text(
+                                groupTitle,
+                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontFamily = TiroBanglaFontFamily
+                            )
+                        }
+                        items(options, key = { it.first.type }) { (option, title) ->
+                            val isSelected = option.type in selectedTypes
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !isSelected) {
+                                        onInvestmentSelect(option.type)
+                                    }
+                                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    title,
+                                    modifier = Modifier.weight(1f),
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
+                                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.SemiBold,
+                                    color = if (isSelected) CalculatorMutedSoft else CalculatorFieldText,
+                                    fontFamily = TiroBanglaFontFamily
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = localizedText("আগেই যোগ করা হয়েছে", "Already added"),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = CalculatorSuccess
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 18.dp),
+                                color = CalculatorDivider
+                            )
+                        }
                     }
                 }
             }

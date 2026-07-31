@@ -16,6 +16,56 @@ import org.junit.Test
 class TaxCalculatorTest {
 
     @Test
+    fun `GPF is available as an investment rebate input`() {
+        val gpf = TaxDefaults.investmentOptions.first()
+
+        assertEquals("gpf", gpf.type)
+        assertEquals("GPF-এ নিজস্ব জমা", gpf.title)
+    }
+
+    @Test
+    fun `DPS rebate only counts the statutory eligible limit`() {
+        val dps = TaxDefaults.investmentOptions.first { it.type == "dps" }.copy(amount = "200000")
+
+        val rebate = calculateInvestmentRebate(
+            investments = listOf(dps),
+            taxableIncome = 2_000_000L
+        )
+
+        assertEquals(12_000.0, rebate, 0.001)
+    }
+
+    @Test
+    fun `government securities and mutual funds apply their own limits`() {
+        val governmentSecurities = TaxDefaults.investmentOptions
+            .first { it.type == "sanchaypatra" }
+            .copy(amount = "600000")
+        val mutualFund = TaxDefaults.investmentOptions
+            .first { it.type == "mutual" }
+            .copy(amount = "700000")
+
+        val rebate = calculateInvestmentRebate(
+            investments = listOf(governmentSecurities, mutualFund),
+            taxableIncome = 10_000_000L
+        )
+
+        assertEquals(100_000.0, rebate, 0.001)
+    }
+
+    @Test
+    fun `new Act category caps are not retroactively applied to older income years`() {
+        val dps = TaxDefaults.investmentOptions.first { it.type == "dps" }.copy(amount = "200000")
+
+        val rebate = calculateInvestmentRebate(
+            investments = listOf(dps),
+            taxableIncome = 2_000_000L,
+            rules = TaxYearCatalog.find("2022-23")
+        )
+
+        assertEquals(30_000.0, rebate, 0.001)
+    }
+
+    @Test
     fun `taxpayer limits match assessment year 2026-27 rules`() {
         val limits = TaxDefaults.taxpayerTypes.associate { it.id to it.taxFreeLimit }
 

@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.google.firebase.messaging.FirebaseMessaging
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.play.AppUpdatePromptState
@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         val savedLanguage = AppUiPreferences.getLanguage(this)
         val savedThemeMode = AppUiPreferences.getThemeMode(this)
@@ -178,16 +179,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applySystemBarStyle(darkTheme: Boolean) {
-        val transparent = android.graphics.Color.TRANSPARENT
-        val barStyle = if (darkTheme) {
-            SystemBarStyle.dark(transparent)
-        } else {
-            SystemBarStyle.light(transparent, transparent)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
         }
-        enableEdgeToEdge(
-            statusBarStyle = barStyle,
-            navigationBarStyle = barStyle
-        )
     }
 
     private fun String.toDarkTheme(systemDark: Boolean): Boolean {

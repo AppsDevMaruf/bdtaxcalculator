@@ -217,9 +217,9 @@ private fun ForceUpdateDetails() {
                 fontWeight = FontWeight.ExtraBold,
                 fontFamily = TiroBanglaFontFamily
             )
-            UpdateBullet(localizedText("অর্থ আইন ২০২৬ অনুযায়ী নতুন করমুক্ত সীমা ও কর স্ল্যাব", "New tax-free limits and slabs under the Finance Act 2026"))
-            UpdateBullet(localizedText("সকল এলাকার ন্যূনতম কর ৫,০০০; নতুন করদাতা ১,০০০ টাকা", "Minimum tax BDT 5,000 everywhere; BDT 1,000 for new taxpayers"))
-            UpdateBullet(localizedText("উৎসে কর ও অগ্রিম কর সমন্বয়, পূর্ণ slab FAQ ও উন্নত হিসাব", "Source/advance tax adjustment, full-slab FAQs, and improved calculations"))
+            UpdateBullet(localizedText("২০২৫-২৬ আয়বর্ষের সংশোধিত কর হিসাব", "Corrected tax calculation for income year 2025-26"))
+            UpdateBullet(localizedText("গত ৫ আয়বর্ষের করের পার্থক্য দেখুন", "Compare tax across the last five income years"))
+            UpdateBullet(localizedText("বিনিয়োগ রেয়াতের নতুন খাত, সহজ নির্বাচন ও সরকারি তথ্যসূত্র", "New rebate categories, easier selection, and official data sources"))
         }
     }
 }

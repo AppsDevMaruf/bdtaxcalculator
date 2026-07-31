@@ -35,7 +35,8 @@ data class TaxPaymentAdjustment(
 data class InvestmentInputData(
     val type: String,
     val title: String,
-    val amount: String = ""
+    val amount: String = "",
+    val maxEligibleAmount: Long? = null
 )
 
 data class SalaryBreakdown(

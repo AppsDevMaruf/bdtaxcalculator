@@ -1106,8 +1106,8 @@ private fun SettingIcon(icon: ImageVector, selected: Boolean) {
 
 private fun Context.getAppVersionName(): String {
     return runCatching {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.8"
-    }.getOrDefault("1.0.8")
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.1.18"
+    }.getOrDefault("1.1.18")
 }
 
 private const val FacebookPageUrl =

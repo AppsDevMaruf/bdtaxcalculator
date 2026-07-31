@@ -51,7 +51,15 @@ fun calculateInvestmentRebate(
     taxableIncome: Long,
     rules: TaxYearRules = TaxYearCatalog.current
 ): Double {
-    val totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
+    val usesIncomeTaxAct2023 = rules.incomeYear in setOf("2025-26", "2024-25", "2023-24")
+    val totalInvestment = investments.sumOf { investment ->
+        val enteredAmount = investment.amount.toLongOrNull() ?: 0L
+        if (usesIncomeTaxAct2023) {
+            investment.maxEligibleAmount?.let { minOf(enteredAmount, it) } ?: enteredAmount
+        } else {
+            enteredAmount
+        }
+    }
     val rebateByInvestment = totalInvestment * rules.investmentRebateRate
     val rebateByIncome = taxableIncome * rules.incomeBasedInvestmentRebateRate
     return minOf(rebateByInvestment, rebateByIncome, rules.maxInvestmentRebate)

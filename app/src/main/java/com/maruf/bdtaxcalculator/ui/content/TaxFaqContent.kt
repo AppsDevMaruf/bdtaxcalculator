@@ -245,8 +245,8 @@ fun incomeTaxFaqs(): List<TaxFaq> {
             id = "eligible_rebate_investment",
             banglaQuestion = "কোন ধরনের বিনিয়োগ/দান কর রেয়াত পাওয়ার উপযুক্ত?",
             englishQuestion = "Which investments or donations are eligible for rebate?",
-            banglaAnswer = "NBR অনুমোদিত সঞ্চয়পত্র, DPS, life insurance, eligible securities/funds বা নির্দিষ্ট দান রেয়াতের আওতায় আসতে পারে।",
-            englishAnswer = "NBR-approved savings certificates, DPS, life insurance, eligible securities/funds, or specified donations may qualify for rebate."
+            banglaAnswer = "জীবন বিমা, GPF/স্বীকৃত ভবিষ্য তহবিল, কল্যাণ বা গোষ্ঠী বিমা তহবিল, সুপারএনুয়েশন/সর্বজনীন পেনশন, DPS, সরকারি সিকিউরিটিজ, তালিকাভুক্ত শেয়ার-স্টক-ডিবেঞ্চার, ইউনিট/মিউচুয়াল ফান্ড/ETF এবং আইন বা SRO-অনুমোদিত নির্দিষ্ট দান রেয়াতের আওতায় আসতে পারে। Calculator-এর বিনিয়োগ dropdown থেকে প্রযোজ্য খাত নির্বাচন করুন।",
+            englishAnswer = "Life insurance, GPF/recognized provident funds, benevolent or group-insurance funds, superannuation/universal pension, DPS, government securities, listed shares/stocks/debentures, units/mutual funds/ETFs, and specified donations approved by law or SRO may qualify. Select the applicable item from the calculator’s investment dropdown."
         ),
         TaxFaq(
             id = "tax_assessment",

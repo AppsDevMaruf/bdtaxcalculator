@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
@@ -18,8 +17,8 @@ android {
         applicationId = "com.maruf.bdtaxcalculator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 16
-        versionName = "1.1.16"
+        versionCode = 18
+        versionName = "1.1.18"
     }
 
     buildTypes {
