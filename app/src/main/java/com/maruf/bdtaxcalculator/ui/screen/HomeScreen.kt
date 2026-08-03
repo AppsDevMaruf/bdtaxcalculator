@@ -13,7 +13,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -41,19 +44,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.automirrored.filled.ShowChart
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowOutward
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +74,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,32 +82,41 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.maruf.bdtaxcalculator.R
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
+import com.maruf.bdtaxcalculator.firebase.FirebaseHomeNews
+import com.maruf.bdtaxcalculator.firebase.FirebaseHomeNewsStore
 import com.maruf.bdtaxcalculator.notification.AppNotificationItem
 import com.maruf.bdtaxcalculator.notification.AppNotificationStore
-import com.maruf.bdtaxcalculator.tax.TaxDefaults
+import com.maruf.bdtaxcalculator.ui.content.incomeTaxFaqs
 import com.maruf.bdtaxcalculator.ui.localizedText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorAccentSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBorder
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorHeroMiddle
+import com.maruf.bdtaxcalculator.ui.theme.CalculatorHeroStart
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMuted
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorMutedSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorPanel
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorSuccess
-import com.maruf.bdtaxcalculator.ui.theme.CalculatorSurfaceAlt
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeActionBlueDark
 import com.maruf.bdtaxcalculator.ui.theme.HomeBorder
 import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftBlue
 import com.maruf.bdtaxcalculator.ui.theme.HomeSoftGreen
+import com.maruf.bdtaxcalculator.ui.theme.HomeSoftPurple
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextMuted
 import com.maruf.bdtaxcalculator.ui.theme.HomeTextPrimary
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
@@ -115,6 +132,7 @@ fun HomeScreen(
     onOpenAuditChecker: () -> Unit,
     onOpenNbrTinCheck: () -> Unit,
     onOpenTaxFaq: () -> Unit,
+    onOpenNotices: () -> Unit,
     onOpenHome: () -> Unit,
     onOpenProfile: () -> Unit,
     selectedDestination: AppDestination
@@ -122,8 +140,14 @@ fun HomeScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val notifications by AppNotificationStore.observe(context).collectAsState()
+    val homeNews by FirebaseHomeNewsStore.observe().collectAsState()
+    val faqCount = incomeTaxFaqs().size
     var isNotificationSheetVisible by rememberSaveable { mutableStateOf(false) }
     val notificationSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    LaunchedEffect(Unit) {
+        FirebaseHomeNewsStore.refresh()
+    }
 
     fun closeNotificationSheet() {
         AppNotificationStore.markAllRead(context)
@@ -149,108 +173,116 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.background,
+                            HomeSoftGreen,
+                            MaterialTheme.colorScheme.background
+                        )
+                    )
+                )
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(
                     PaddingValues(
                         start = 16.dp,
-                        top = 18.dp,
+                        top = 8.dp,
                         end = 16.dp,
                         bottom = FloatingBottomBarSafePadding
                     )
                 ),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(26.dp)
         ) {
-
-            WelcomeSection()
-
-            HomeServiceCard(
-                icon = Icons.Default.Assessment,
-                iconBg = HomeActionBlue,
-                title = localizedText("ট্যাক্স ক্যালকুলেটর", "Tax Calculator"),
-                description = localizedText(
-                    "আপনার বর্তমান আয়, বেতন কাঠামো এবং ছাড়ের তথ্য অনুযায়ী আয়কর হিসাব করুন।",
-                    "Estimate income tax from your salary, bonus, exemptions, and investment rebate."
-                ),
-                buttonText = localizedText("এখন হিসাব করুন", "Calculate Now"),
-                buttonColor = HomeActionBlue,
-                accentBlock = HomeSoftGreen,
-                badge = localizedText(
-                    "আয়বর্ষ ${TaxDefaults.incomeYearLabel} · অ্যাসেসমেন্ট ${TaxDefaults.assessmentYearLabel}",
-                    "Income Year 2025-26 · AY 2026-27"
-                ),
-                onClick = {
-                    FirebaseTracker.logHomeServiceOpened("tax_calculator")
-                    onOpenTaxCalculator()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (homeNews.isEnabled) {
+                    FirebaseNewsTicker(news = homeNews)
                 }
-            )
 
-            HomeServiceCard(
-                icon = Icons.Default.Security,
-                iconBg = MaterialTheme.colorScheme.primary,
-                title = localizedText("অডিট চেক", "Audit Check"),
-                description = localizedText(
-                    "আপনার TIN অডিটে আছে কি না তা সম্পূর্ণ অফলাইনে দ্রুত যাচাই করুন।",
-                    "Check whether your TIN is in the NBR audit list, fully offline."
-                ),
-                buttonText = localizedText("স্ট্যাটাস দেখুন", "Check Status"),
-                buttonColor = MaterialTheme.colorScheme.primary,
-                accentBlock = HomeSoftGreen,
-                badge = localizedText("অফলাইন ও প্রাইভেট", "Offline and Private"),
-                onClick = {
-                    FirebaseTracker.logHomeServiceOpened("audit_checker")
-                    onOpenAuditChecker()
-                }
-            )
+                TaxCalculatorHero(
+                    onClick = {
+                        FirebaseTracker.logHomeServiceOpened("tax_calculator")
+                        onOpenTaxCalculator()
+                    }
+                )
+            }
 
-            HomeServiceCard(
-                icon = Icons.Default.QuestionMark,
-                iconBg = MaterialTheme.colorScheme.primary,
-                title = localizedText("আয়কর সংক্রান্ত সচরাচর জিজ্ঞাসা", "Tax FAQ"),
-                description = localizedText(
-                    "NBR FAQ-এর আয়কর প্রশ্ন, রিটার্ন, e-TIN, e-Return ও রেয়াতের উত্তর এক জায়গায় দেখুন।",
-                    "Browse NBR-style answers about income tax, returns, e-TIN, e-Return, and rebate in one place."
-                ),
-                buttonText = localizedText("FAQ দেখুন", "Browse FAQ"),
-                buttonColor = MaterialTheme.colorScheme.primary,
-                accentBlock = HomeSoftGreen,
-                badge = localizedText("৮১টি প্রশ্ন", "81 questions"),
-                onClick = {
-                    FirebaseTracker.logHomeServiceOpened("tax_faq")
-                    onOpenTaxFaq()
-                }
-            )
-
-            ImportantGovtLinksCard(
-                onOpenLink = { link ->
-                    FirebaseTracker.logEvent(
-                        "important_govt_link_opened",
-                        Bundle().apply { putString("link", link.analyticsName) }
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                HomeSectionHeader(
+                    icon = Icons.Default.Star,
+                    title = localizedText("দ্রুত সেবা", "Quick actions"),
+                    subtitle = localizedText(
+                        "এক ট্যাপেই দরকারি আয়কর সেবা।",
+                        "Useful tax tools, only one tap away."
                     )
-                    uriHandler.openUri(link.url)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Shield,
+                        iconResource = R.drawable.ic_audit_check,
+                        title = localizedText("অডিট চেক", "Audit Check"),
+                        description = localizedText(
+                            "আপনার TIN অডিট তালিকায় আছে কি না সম্পূর্ণ অফলাইনে যাচাই করুন।",
+                            "Check whether your TIN is in the NBR audit list, fully offline."
+                        ),
+                        badge = localizedText("অফলাইন · AY ২০২৩–২৪", "Offline · AY 2023–24"),
+                        accent = HomeActionBlue,
+                        accentBackground = HomeSoftBlue,
+                        onClick = {
+                            FirebaseTracker.logHomeServiceOpened("audit_checker")
+                            onOpenAuditChecker()
+                        }
+                    )
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.QuestionMark,
+                        iconResource = R.drawable.ic_tax_faq,
+                        title = localizedText("ট্যাক্স FAQ", "Tax FAQ"),
+                        description = localizedText(
+                            "আয়কর, রিটার্ন, e-TIN, e-Return ও রেয়াতের উত্তর এক জায়গায়।",
+                            "Answers on income tax, returns, e-TIN, e-Return, and rebate in one place."
+                        ),
+                        badge = localizedText(
+                            "${faqCount.toString().toBanglaDigits()}টি প্রশ্ন",
+                            "$faqCount questions"
+                        ),
+                        accent = Color(0xFF7C3AED),
+                        accentBackground = HomeSoftPurple,
+                        onClick = {
+                            FirebaseTracker.logHomeServiceOpened("tax_faq")
+                            onOpenTaxFaq()
+                        }
+                    )
                 }
-            )
+                QuickNoticeShortcut(
+                    noticeCount = homeNews.notices.size,
+                    onClick = onOpenNotices
+                )
+            }
 
-            /*HomeServiceCard(
-                icon = Icons.Default.AccountBalance,
-                iconBg = CalculatorSuccess,
-                title = localizedText("NBR TIN যাচাই", "NBR TIN Check"),
-                description = localizedText(
-                    "সরকারি NBR-Sonali Bank TAX portal খুলে TIN তথ্য যাচাই করুন।",
-                    "Open the official NBR-Sonali Bank TAX portal to verify TIN details."
-                ),
-                buttonText = localizedText("সরকারি পোর্টাল খুলুন", "Open Official Portal"),
-                buttonColor = CalculatorSuccess,
-                accentBlock = HomeSoftGreen,
-                badge = localizedText("ইন্টারনেট প্রয়োজন", "Internet Required"),
-                onClick = {
-                    FirebaseTracker.logHomeServiceOpened("nbr_tin_check")
-                    onOpenNbrTinCheck()
-                }
-            )*/
-
-            //FilingStatusCard()
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                HomeSectionHeader(
+                    icon = Icons.Default.AccountBalance,
+                    title = localizedText("গুরুত্বপূর্ণ সরকারি লিংক", "Important Govt. Links"),
+                    subtitle = localizedText(
+                        "সরকারি NBR ও সংশ্লিষ্ট সেবা সরাসরি খুলুন।",
+                        "Open official NBR and government services directly."
+                    )
+                )
+                ImportantGovtLinksCard(
+                    onOpenLink = { link ->
+                        FirebaseTracker.logEvent(
+                            "important_govt_link_opened",
+                            Bundle().apply { putString("link", link.analyticsName) }
+                        )
+                        uriHandler.openUri(link.url)
+                    }
+                )
+            }
         }
     }
 
@@ -293,28 +325,73 @@ private fun HomeTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()+8.dp),
+            .padding(
+                start = 16.dp,
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,
+                end = 16.dp,
+                bottom = 12.dp
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                "Tax Calculator Bd",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = HomeActionBlueDark,
-                fontFamily = TiroBanglaFontFamily
-            )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            listOf(CalculatorHeroMiddle, Color(0xFF22A85A))
+                        ),
+                        shape = RoundedCornerShape(17.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "%",
+                    color = Color.White,
+                    fontSize = 27.sp,
+                    lineHeight = 30.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "Tax Calculator BD",
+                    fontSize = 19.sp,
+                    lineHeight = 23.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HomeActionBlueDark,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1
+                )
+                Text(
+                    text = localizedText(
+                        "বাংলাদেশের আয়কর সহায়ক",
+                        "Bangladesh income tax helper"
+                    ),
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = HomeTextMuted,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1
+                )
+            }
         }
         Box {
             Surface(
-                modifier = Modifier.noRippleClickable(onClick = onNotificationsClick),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .noRippleClickable(onClick = onNotificationsClick),
                 color = bellBackground,
-                shape = RoundedCornerShape(16.dp),
+                shape = CircleShape,
                 border = BorderStroke(1.dp, HomeBorder)
             ) {
                 Box(
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(50.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -571,123 +648,377 @@ private fun String.toBanglaDigits(): String {
 }
 
 @Composable
-private fun WelcomeSection() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            localizedText("স্বাগতম!", "Welcome back!"),
-            fontSize = 28.sp,
-            lineHeight = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = HomeActionBlue,
-            fontFamily = TiroBanglaFontFamily
-        )
-        Text(
-            localizedText(
-                "আয়বর্ষ ${TaxDefaults.incomeYearLabel} ও অ্যাসেসমেন্ট ${TaxDefaults.assessmentYearLabel}-এর জন্য আপনার ট্যাক্স সারসংক্ষেপ প্রস্তুত আছে।",
-                "Your tax overview for income year 2025-26 and assessment year 2026-27 is ready."
-            ),
-            fontSize = 16.sp,
-            lineHeight = 24.sp,
-            color = HomeTextPrimary,
-            fontFamily = TiroBanglaFontFamily
-        )
-    }
-}
-
-@Composable
-private fun HomeServiceCard(
-    icon: ImageVector,
-    iconBg: Color,
-    title: String,
-    description: String,
-    buttonText: String,
-    buttonColor: Color,
-    accentBlock: Color,
-    badge: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, HomeBorder)
+private fun TaxCalculatorHero(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        CalculatorHeroStart,
+                        CalculatorHeroMiddle,
+                        Color(0xFF15944B)
+                    )
+                ),
+                shape = RoundedCornerShape(30.dp)
+            )
+            .noRippleClickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 44.dp, y = (-34).dp)
+                .size(170.dp)
+                .background(Color(0x2AFFD54F), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = 64.dp, y = 34.dp)
+                .size(180.dp)
+                .background(Color.White.copy(alpha = 0.07f), CircleShape)
+        )
+
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .noRippleClickable(onClick = onClick)
-                .padding(18.dp)
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                Surface(
+                    color = Color.White.copy(alpha = 0.13f),
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
                 ) {
-                    Surface(
-                        color = iconBg,
-                        shape = RoundedCornerShape(12.dp)
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            icon,
-                            contentDescription = title,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(14.dp).size(20.dp)
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
-                    }
-                    Surface(
-                        color = accentBlock,
-                        shape = RoundedCornerShape(999.dp)
-                    ) {
                         Text(
-                            badge,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            text = localizedText(
+                                "১০০% অফলাইন ও ব্যক্তিগত",
+                                "100% offline & private"
+                            ),
+                            color = Color.White,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = HomeTextMuted,
+                            fontWeight = FontWeight.Bold,
                             fontFamily = TiroBanglaFontFamily
                         )
                     }
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        title,
-                        fontSize = 24.sp,
-                        lineHeight = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = HomeActionBlue,
-                        fontFamily = TiroBanglaFontFamily
-                    )
-                    Text(
-                        description,
-                        fontSize = 14.sp,
-                        lineHeight = 22.sp,
-                        color = HomeTextPrimary,
-                        fontFamily = TiroBanglaFontFamily
+                Surface(
+                    color = Color.White.copy(alpha = 0.13f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                ) {
+                    Icon(
+                        Icons.Default.Description,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(15.dp).size(27.dp)
                     )
                 }
+            }
 
-                Button(
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                    shape = RoundedCornerShape(8.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = localizedText("কর হিসাব হোক সহজ", "Make tax feel simple"),
+                    color = Color.White,
+                    fontSize = 29.sp,
+                    lineHeight = 36.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    text = localizedText(
+                        "আয়, করমুক্ত আয় ও বিনিয়োগ যোগ করে কয়েক মিনিটেই পরিষ্কার হিসাব পান।",
+                        "Add income, exemptions, and investments to get a clear estimate in minutes."
+                    ),
+                    color = Color.White.copy(alpha = 0.78f),
+                    fontSize = 13.sp,
+                    lineHeight = 21.sp,
+                    fontFamily = TiroBanglaFontFamily
+                )
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.96f),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 18.dp, top = 2.dp, end = 10.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        buttonText,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
+                        text = localizedText("হিসাব শুরু করুন", "Start calculating"),
+                        color = Color(0xFF0B5C35),
+                        fontSize = 17.sp,
+                        lineHeight = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         fontFamily = TiroBanglaFontFamily
                     )
+                    Surface(
+                        color = Color(0xFFE6F2EC),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFF0B6A3C),
+                            modifier = Modifier.padding(12.dp).size(22.dp)
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FirebaseNewsTicker(
+    news: FirebaseHomeNews
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        color = CalculatorPanel,
+        shape = RoundedCornerShape(17.dp),
+        border = BorderStroke(1.dp, CalculatorSuccess.copy(alpha = 0.22f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
+        ) {
+            Surface(
+                color = CalculatorSuccess,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = localizedText("NBR খবর", "NBR NEWS"),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1
+                )
+            }
+            Text(
+                text = localizedText(news.banglaText, news.englishText),
+                modifier = Modifier
+                    .weight(1f)
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 700,
+                        repeatDelayMillis = 900
+                    ),
+                color = HomeTextPrimary,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Medium,
+                fontFamily = TiroBanglaFontFamily,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun HomeSectionHeader(
+    icon: ImageVector,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Surface(
+            color = HomeSoftGreen,
+            shape = RoundedCornerShape(13.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = CalculatorSuccess,
+                modifier = Modifier.padding(10.dp).size(20.dp)
+            )
+        }
+        SectionTitle(title = title, subtitle = subtitle)
+    }
+}
+
+@Composable
+private fun QuickActionCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    iconResource: Int? = null,
+    title: String,
+    description: String,
+    badge: String,
+    accent: Color,
+    accentBackground: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(220.dp)
+            .noRippleClickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(color = accentBackground, shape = RoundedCornerShape(14.dp)) {
+                    if (iconResource != null) {
+                        Image(
+                            painter = painterResource(iconResource),
+                            contentDescription = null,
+                            modifier = Modifier.padding(5.dp).size(36.dp)
+                        )
+                    } else {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.padding(12.dp).size(22.dp)
+                        )
+                    }
+                }
+                Surface(color = accentBackground, shape = CircleShape) {
+                    Icon(
+                        Icons.Default.ArrowOutward,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.padding(8.dp).size(18.dp)
+                    )
+                }
+            }
+            Text(
+                text = title,
+                color = HomeTextPrimary,
+                fontSize = 17.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = TiroBanglaFontFamily
+            )
+            Text(
+                text = description,
+                color = HomeTextMuted,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                fontFamily = TiroBanglaFontFamily
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Surface(color = accentBackground, shape = RoundedCornerShape(12.dp)) {
+                Text(
+                    text = badge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    color = accent,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickNoticeShortcut(
+    noticeCount: Int,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp)
+            .noRippleClickable(onClick = onClick),
+        color = CalculatorPanel,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, CalculatorSuccess.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(11.dp)
+        ) {
+            Surface(
+                color = HomeSoftGreen,
+                shape = RoundedCornerShape(13.dp)
+            ) {
+                Icon(
+                    Icons.Default.NotificationsNone,
+                    contentDescription = null,
+                    tint = CalculatorSuccess,
+                    modifier = Modifier.padding(11.dp).size(21.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = localizedText("NBR নোটিশ", "NBR Notices"),
+                    color = HomeTextPrimary,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    text = localizedText(
+                        "${noticeCount.toString().toBanglaDigits()}টি সর্বশেষ অফিসিয়াল আয়কর নোটিশ",
+                        "$noticeCount latest official income-tax notices"
+                    ),
+                    color = HomeTextMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Surface(
+                color = CalculatorAccentSoft,
+                shape = CircleShape
+            ) {
+                Icon(
+                    Icons.Default.ArrowOutward,
+                    contentDescription = localizedText("নোটিশ খুলুন", "Open notices"),
+                    tint = HomeActionBlue,
+                    modifier = Modifier.padding(9.dp).size(18.dp)
+                )
             }
         }
     }
@@ -697,54 +1028,45 @@ private data class GovtLink(
     val banglaTitle: String,
     val englishTitle: String,
     val url: String,
-    val analyticsName: String
+    val analyticsName: String,
+    val icon: ImageVector
 )
 
 private val importantGovtLinks = listOf(
-    GovtLink("e-TDS", "e-TDS", "https://etds.gov.bd", "e_tds"),
-    GovtLink("e-TIN", "e-TIN", "https://secure.incometax.gov.bd/TINHome", "e_tin"),
-    GovtLink("a-Challan", "a-Challan", "https://ibas.finance.gov.bd", "a_challan"),
-    GovtLink("NBR Website", "NBR Website", "https://nbr.gov.bd", "nbr_website"),
-    GovtLink("Sonali Bank Payment", "Sonali Bank Payment", "https://nbr.sblesheba.com/IncomeTax/Payment", "sonali_bank_payment"),
-    GovtLink("e-Return", "e-Return", "https://etaxnbr.gov.bd", "e_return"),
-    GovtLink("Return Verify", "Return Verify", "https://etaxnbr.gov.bd", "return_verify")
+    GovtLink("e-TDS", "e-TDS", "https://etds.gov.bd", "e_tds", Icons.Default.Description),
+    GovtLink("e-TIN", "e-TIN", "https://secure.incometax.gov.bd/TINHome", "e_tin", Icons.Default.Badge),
+    GovtLink("a-Challan", "a-Challan", "https://ibas.finance.gov.bd", "a_challan", Icons.AutoMirrored.Filled.ReceiptLong),
+    GovtLink("NBR Website", "NBR Website", "https://nbr.gov.bd", "nbr_website", Icons.Default.AccountBalance),
+    GovtLink(
+        "সোনালী ব্যাংক পেমেন্ট",
+        "Sonali Bank Payment",
+        "https://nbr.sblesheba.com/IncomeTax/Payment",
+        "sonali_bank_payment",
+        Icons.Default.CreditCard
+    ),
+    GovtLink("e-Return", "e-Return", "https://etaxnbr.gov.bd", "e_return", Icons.Default.UploadFile),
+    GovtLink("রিটার্ন যাচাই", "Return Verify", "https://etaxnbr.gov.bd", "return_verify", Icons.Default.Verified)
 )
 
 @Composable
 private fun ImportantGovtLinksCard(
     onOpenLink: (GovtLink) -> Unit
 ) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, HomeBorder)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            SectionTitle(
-                title = localizedText("গুরুত্বপূর্ণ সরকারি লিংক", "Important Govt. Links"),
-                subtitle = localizedText(
-                    "Official NBR ও related service দ্রুত খুলুন।",
-                    "Quickly open official NBR and related services."
-                )
-            )
-
-            importantGovtLinks.chunked(2).forEach { rowLinks ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowLinks.forEach { link ->
-                        GovtLinkChip(
-                            modifier = Modifier.weight(1f),
-                            text = localizedText(link.banglaTitle, link.englishTitle),
-                            onClick = { onOpenLink(link) }
-                        )
-                    }
-                    if (rowLinks.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+        importantGovtLinks.chunked(2).forEach { rowLinks ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                rowLinks.forEach { link ->
+                    GovtLinkChip(
+                        modifier = Modifier.weight(1f),
+                        link = link,
+                        onClick = { onOpenLink(link) }
+                    )
+                }
+                if (rowLinks.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -754,23 +1076,51 @@ private fun ImportantGovtLinksCard(
 @Composable
 private fun GovtLinkChip(
     modifier: Modifier = Modifier,
-    text: String,
+    link: GovtLink,
     onClick: () -> Unit
 ) {
+    val accent = when (link.analyticsName) {
+        "e_tds", "sonali_bank_payment" -> Color(0xFF3974D8)
+        "e_tin", "e_return" -> Color(0xFF7C3AED)
+        "a_challan" -> Color(0xFFD28B12)
+        else -> CalculatorSuccess
+    }
+
     Surface(
-        modifier = modifier.noRippleClickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(8.dp)
+        modifier = modifier
+            .height(62.dp)
+            .noRippleClickable(onClick = onClick),
+        color = CalculatorPanel,
+        shape = RoundedCornerShape(17.dp),
+        border = BorderStroke(1.dp, CalculatorBorder)
     ) {
-        Text(
-            text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 11.dp),
-            color = MaterialTheme.colorScheme.onPrimary,
-            fontSize = 12.sp,
-            lineHeight = 15.sp,
-            fontWeight = FontWeight.ExtraBold,
-            fontFamily = TiroBanglaFontFamily
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Surface(
+                color = accent.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    link.icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.padding(9.dp).size(18.dp)
+                )
+            }
+            Text(
+                text = localizedText(link.banglaTitle, link.englishTitle),
+                color = HomeTextPrimary,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+                fontWeight = FontWeight.Medium,
+                fontFamily = TiroBanglaFontFamily,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -799,85 +1149,6 @@ private fun SectionTitle(
 }
 
 @Composable
-private fun FilingStatusCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, HomeBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(18.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            HomeInfoRow(
-                icon = Icons.AutoMirrored.Filled.ShowChart,
-                iconTint = MaterialTheme.colorScheme.primary,
-                iconBg = HomeSoftGreen,
-                label = localizedText("ফাইলিং স্ট্যাটাস", "Filing Status"),
-                value = localizedText("চলমান", "In Progress")
-            )
-
-            HomeInfoRow(
-                icon = Icons.Default.CalendarMonth,
-                iconTint = HomeActionBlue,
-                iconBg = HomeSoftBlue,
-                label = localizedText("শেষ তারিখ", "Deadline"),
-                value = localizedText("১৫ অক্টোবর, ২০২৪", "Oct 15, 2024")
-            )
-
-            Text(
-                localizedText("বিস্তারিত দেখুন →", "View Details →"),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary,
-                fontFamily = TiroBanglaFontFamily
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeInfoRow(
-    icon: ImageVector,
-    iconTint: Color,
-    iconBg: Color,
-    label: String,
-    value: String
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Surface(
-            color = iconBg,
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                tint = iconTint,
-                modifier = Modifier.padding(12.dp).size(20.dp)
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = HomeTextMuted,
-                fontFamily = TiroBanglaFontFamily
-            )
-            Text(
-                value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = HomeActionBlue,
-                fontFamily = TiroBanglaFontFamily
-            )
-        }
-    }
-}
-
-@Composable
 fun HomeBottomNavigation(
     selectedDestination: AppDestination,
     onOpenHome: () -> Unit,
@@ -890,19 +1161,22 @@ fun HomeBottomNavigation(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(horizontal = 24.dp, vertical = 10.dp)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-            shape = RoundedCornerShape(32.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(18.dp, RoundedCornerShape(34.dp)),
+            color = CalculatorPanel.copy(alpha = 0.96f),
+            shape = RoundedCornerShape(34.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
             tonalElevation = 0.dp,
-            shadowElevation = 14.dp
+            shadowElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -954,16 +1228,16 @@ private fun BottomNavItem(
     )
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) {
-            MaterialTheme.colorScheme.primary
+            HomeSoftGreen
         } else {
-            CalculatorSurfaceAlt
+            Color.Transparent
         },
         animationSpec = tween(durationMillis = 220),
         label = "bottomNavBackground"
     )
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) {
-            MaterialTheme.colorScheme.onPrimary
+            HomeActionBlue
         } else {
             HomeNavInactive
         },
@@ -985,9 +1259,9 @@ private fun BottomNavItem(
         border = BorderStroke(
             width = 1.dp,
             color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
+                HomeActionBlue.copy(alpha = 0.08f)
             } else {
-                CalculatorBorder
+                Color.Transparent
             }
         )
     ) {

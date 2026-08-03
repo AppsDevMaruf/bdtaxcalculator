@@ -1,0 +1,6 @@
+/.render-assets/
+/raw/
+/voiceovers/*.aiff
+/final/*.png
+/final/*.mp4
+!/final/*-voiceover.mp4

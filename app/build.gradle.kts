@@ -17,8 +17,8 @@ android {
         applicationId = "com.maruf.bdtaxcalculator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.1.18"
+        versionCode = 19
+        versionName = "1.1.19"
     }
 
     buildTypes {
@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.config)
     implementation(libs.play.app.update)
     implementation(libs.play.app.update.ktx)
     implementation(libs.play.review)

@@ -25,6 +25,7 @@ sealed class Screen(val route: String) {
     data object AuditChecker : Screen("audit_checker")
     data object NbrTinCheck : Screen("nbr_tin_check")
     data object TaxFaq : Screen("tax_faq")
+    data object TaxNotices : Screen("tax_notices")
     data object Profile : Screen("profile")
 }
 
@@ -70,6 +71,7 @@ fun AppRootScreen(
             Screen.AuditChecker.route -> "audit_checker"
             Screen.NbrTinCheck.route -> "nbr_tin_check"
             Screen.TaxFaq.route -> "tax_faq"
+            Screen.TaxNotices.route -> "tax_notices"
             Screen.Profile.route -> "settings"
             else -> "home"
         }
@@ -88,6 +90,7 @@ fun AppRootScreen(
                     onOpenAuditChecker = { navController.navigateToBottomTab(Screen.AuditChecker.route) },
                     onOpenNbrTinCheck = { navController.navigate(Screen.NbrTinCheck.route) },
                     onOpenTaxFaq = { navController.navigate(Screen.TaxFaq.route) },
+                    onOpenNotices = { navController.navigate(Screen.TaxNotices.route) },
                     onOpenHome = { /* Already here */ },
                     onOpenProfile = { navController.navigateToBottomTab(Screen.Profile.route) },
                     selectedDestination = AppDestination.Home
@@ -112,6 +115,12 @@ fun AppRootScreen(
 
             composable(Screen.TaxFaq.route) {
                 TaxFaqScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.TaxNotices.route) {
+                TaxNoticeScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
