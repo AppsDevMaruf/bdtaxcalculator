@@ -9,6 +9,7 @@ object AppUiPreferences {
     private const val keyLanguage = "language"
     private const val keyThemeMode = "theme_mode"
     private const val keyThemePalette = "theme_palette"
+    private const val keyOnboardingCompleted = "onboarding_completed"
 
     const val languageBangla = "bn"
     const val languageEnglish = "en"
@@ -65,6 +66,14 @@ object AppUiPreferences {
             return
         }
         preferences(context).edit { putString(keyThemePalette, themePalette) }
+    }
+
+    fun hasCompletedOnboarding(context: Context): Boolean {
+        return preferences(context).getBoolean(keyOnboardingCompleted, false)
+    }
+
+    fun setOnboardingCompleted(context: Context) {
+        preferences(context).edit { putBoolean(keyOnboardingCompleted, true) }
     }
 
     private fun preferences(context: Context) =

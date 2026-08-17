@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
         val savedLanguage = AppUiPreferences.getLanguage(this)
         val savedThemeMode = AppUiPreferences.getThemeMode(this)
         val savedThemePalette = AppUiPreferences.getThemePalette(this)
+        val hasCompletedOnboarding = AppUiPreferences.hasCompletedOnboarding(this)
         applySystemBarStyle(savedThemeMode.toDarkTheme(isSystemInDarkMode()))
 
         playStoreUpdateManager = PlayStoreUpdateManager(
@@ -102,6 +103,11 @@ class MainActivity : AppCompatActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         AppRootScreen(
+                            hasCompletedOnboarding = hasCompletedOnboarding,
+                            onOnboardingCompleted = {
+                                AppUiPreferences.setOnboardingCompleted(this)
+                                FirebaseTracker.logEvent("onboarding_completed")
+                            },
                             language = language,
                             themeMode = themeMode,
                             onLanguageChange = { newLanguage ->

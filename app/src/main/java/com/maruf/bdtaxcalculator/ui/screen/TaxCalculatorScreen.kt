@@ -1340,13 +1340,28 @@ fun CurrencyInputField(
     label: String,
     placeholder: String,
     leading: @Composable (() -> Unit)? = null,
-    leadingAction: @Composable (() -> Unit)? = null
+    leadingAction: @Composable (() -> Unit)? = null,
+    labelAction: @Composable (() -> Unit)? = null
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, fontSize = 12.sp, lineHeight = 2.sp, fontWeight = FontWeight.Medium, color = CalculatorFieldText, fontFamily = TiroBanglaFontFamily)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                modifier = Modifier.weight(1f),
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = CalculatorFieldText,
+                fontFamily = TiroBanglaFontFamily
+            )
+            labelAction?.invoke()
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1540,6 +1555,7 @@ private fun InvestmentInputSection(
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     var showTypeSheet by rememberSaveable { mutableStateOf(false) }
     var typeSearchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedHelp by remember { mutableStateOf<InvestmentHelpContent?>(null) }
     val typeSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val availableOptions = TaxDefaults.investmentOptions.filter { option ->
         investments.none { it.type == option.type }
@@ -1598,6 +1614,30 @@ private fun InvestmentInputSection(
                             onValueChange = { onInvestmentChange(investment.type, it) },
                             label = investment.localizedTitle(),
                             placeholder = "0",
+                            labelAction = if (investment.type == "gpf") {
+                                {
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .noRippleClickable {
+                                                selectedHelp = InvestmentHelpContents.gpf
+                                            },
+                                        shape = CircleShape,
+                                        color = CalculatorAccentSoft
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = localizedText("GPF সম্পর্কে জানুন", "Learn about GPF"),
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                             leadingAction = {
                                 Surface(
                                     modifier = Modifier
@@ -1694,6 +1734,13 @@ private fun InvestmentInputSection(
                 showTypeSheet = false
                 typeSearchQuery = ""
             }
+        )
+    }
+
+    selectedHelp?.let { helpContent ->
+        InvestmentHelpBottomSheet(
+            content = helpContent,
+            onDismiss = { selectedHelp = null }
         )
     }
 }

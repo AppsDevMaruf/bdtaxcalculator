@@ -1,0 +1,17 @@
+<bn-BD>
+নতুন কী আছে:
+• সম্পূর্ণ নতুন ও সহজ ৩ ধাপের অনবোর্ডিং
+• ট্যাক্স আইনজীবীর পরামর্শ অনুরোধ ও WhatsApp বুকিং সুবিধা
+• ভবিষ্যৎ তারিখ ও সময় বাছাইসহ উন্নত ফর্ম ভ্যালিডেশন
+• হোম ও সেটিংস স্ক্রিনের UI আরও সুন্দর ও ব্যবহারবান্ধব
+• ভাষা নির্বাচন, corner radius ও অন্যান্য ছোটখাটো সমস্যা সমাধান
+</bn-BD>
+
+<en-US>
+What's new:
+• A fresh and simple 3-step onboarding experience
+• Tax lawyer consultation requests with WhatsApp booking
+• Improved form validation with future date and time selection
+• Refined Home and Settings UI
+• Fixed language selection, corner radius, and other minor issues
+</en-US>

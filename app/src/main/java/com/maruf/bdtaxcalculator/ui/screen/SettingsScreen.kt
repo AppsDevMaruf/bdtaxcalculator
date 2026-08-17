@@ -220,9 +220,10 @@ fun ProfileScreen(
                     "নতুন হিসাব শুরু হলে করদাতার শ্রেণী ডিফল্ট হিসেবে ব্যবহার হবে।",
                     "This taxpayer category is used as the default for new calculations."
                 ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = CalculatorMuted,
                 fontFamily = TiroBanglaFontFamily
             )
@@ -289,9 +290,10 @@ fun ProfileScreen(
                     "এই অ্যাপের tax rules জাতীয় রাজস্ব বোর্ডের প্রকাশিত আয়কর পরিপত্রের ভিত্তিতে সাজানো। PDF খুলতে নিচের যেকোনো বছর চাপুন।",
                     "The tax rules in this app are based on income-tax circulars published by the National Board of Revenue. Tap a year to open the PDF."
                 ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = CalculatorMuted,
                 fontFamily = TiroBanglaFontFamily
             )
@@ -332,9 +334,10 @@ fun ProfileScreen(
                     "নোট: অ্যাপটি প্রাথমিক হিসাবের সহায়ক। রিটার্ন দাখিল বা চূড়ান্ত সিদ্ধান্তের আগে মূল পরিপত্র এবং প্রযোজ্য আইন যাচাই করুন।",
                     "Note: This app is a calculation aid. Check the original circular and applicable law before filing a return or making a final decision."
                 ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                fontSize = 12.sp,
-                lineHeight = 18.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = CalculatorFieldText,
                 fontFamily = TiroBanglaFontFamily
             )
@@ -424,7 +427,9 @@ fun ProfileScreen(
             ),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            fontSize = 12.sp,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            fontWeight = FontWeight.Normal,
             color = CalculatorMuted,
             fontFamily = TiroBanglaFontFamily
         )
@@ -544,9 +549,8 @@ private fun PrivacyPill(label: String) {
 @Composable
 private fun AppLanguageRowCard(language: String, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CalculatorPanel),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(10.dp),
@@ -555,26 +559,28 @@ private fun AppLanguageRowCard(language: String, onClick: () -> Unit) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Surface(color = HomeSoftBlue, shape = RoundedCornerShape(14.dp)) {
+            Surface(color = HomeSoftBlue, shape = RoundedCornerShape(12.dp)) {
                 Text(
                     if (language == AppUiPreferences.languageEnglish) "\uD83C\uDDFA\uD83C\uDDF8" else "\uD83C\uDDE7\uD83C\uDDE9",
-                    modifier = Modifier.padding(10.dp),
-                    fontSize = 20.sp
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                    fontSize = 16.sp
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     localizedText("অ্যাপের ভাষা", "App Language"),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Bold,
                     color = HomeTextPrimary,
                     fontFamily = TiroBanglaFontFamily
                 )
                 Text(
                     if (language == AppUiPreferences.languageEnglish) "English" else "বাংলা",
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
                     color = CalculatorMuted,
                     fontFamily = TiroBanglaFontFamily
                 )
@@ -619,8 +625,8 @@ private fun LanguageBottomSheet(
             Column(modifier = Modifier.padding(horizontal = 18.dp)) {
                 Text(
                     localizedText("অ্যাপের ভাষা", "App Language"),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
                     color = HomeTextPrimary,
                     fontFamily = TiroBanglaFontFamily
                 )
@@ -629,8 +635,8 @@ private fun LanguageBottomSheet(
                         "ভাষা পুরো অ্যাপে প্রয়োগ হবে",
                         "Language changes will be applied to the entire app"
                     ),
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
                     color = CalculatorMuted,
                     fontFamily = TiroBanglaFontFamily
                 )
@@ -661,39 +667,38 @@ private fun LanguageOptionRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Row(
+    Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(if (selected) HomeSoftGreen else Color.Transparent)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = if (selected) HomeSoftGreen else Color.Transparent
     ) {
-        Text(
-            flag,
-            fontSize = 20.sp
-        )
-        Text(
-            title,
-            modifier = Modifier.weight(1f),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            color = HomeTextPrimary,
-            fontFamily = TiroBanglaFontFamily
-        )
-        if (selected) {
-            Surface(
-                modifier = Modifier.size(28.dp),
-                shape = CircleShape,
-                color = CalculatorSuccess
-            ) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(4.dp)
-                )
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                flag,
+                fontSize = 20.sp
+            )
+            Text(
+                title,
+                modifier = Modifier.weight(1f),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = HomeTextPrimary,
+                fontFamily = TiroBanglaFontFamily
+            )
+            if (selected) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = CalculatorSuccess,
+                        modifier = Modifier.padding(4.dp)
+                    )
             }
         }
     }
@@ -736,15 +741,16 @@ private fun ThemeToggleCard(
                 Icon(
                     if (isDarkMode) Icons.Default.DarkMode else Icons.Default.WbSunny,
                     contentDescription = null,
-                    modifier = Modifier.padding(10.dp).size(22.dp),
+                    modifier = Modifier.padding(10.dp).size(12.dp),
                     tint = iconTint
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     localizedText("থিম", "Theme"),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Bold,
                     color = HomeTextPrimary,
                     fontFamily = TiroBanglaFontFamily
                 )
@@ -753,7 +759,8 @@ private fun ThemeToggleCard(
                         if (isDarkMode) "ডার্ক মোড চালু আছে" else "লাইট মোড চালু আছে",
                         if (isDarkMode) "Dark mode is enabled" else "Light mode is enabled"
                     ),
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
                     color = CalculatorMuted,
                     fontFamily = TiroBanglaFontFamily
                 )
@@ -938,7 +945,7 @@ private fun IosStyleSwitch(
 
     Surface(
         modifier = Modifier
-            .size(width = 56.dp, height = 32.dp)
+            .size(width = 52.dp, height = 28.dp)
             .clickable { onCheckedChange(!checked) },
         shape = RoundedCornerShape(999.dp),
         color = trackColor,
@@ -951,7 +958,7 @@ private fun IosStyleSwitch(
             Surface(
                 modifier = Modifier
                     .offset(x = thumbOffset)
-                    .size(28.dp),
+                    .size(24.dp),
                 shape = CircleShape,
                 color = thumbColor,
                 shadowElevation = 4.dp
@@ -998,22 +1005,25 @@ private fun PreferenceChoiceRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .background(if (selected) HomeSoftGreen else Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SettingIcon(icon = icon, selected = selected)
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center ) {
             Text(
                 title,
-                fontSize = 15.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = HomeTextPrimary,
                 fontFamily = TiroBanglaFontFamily
             )
             Text(
                 subtitle,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Normal,
                 color = CalculatorMuted,
                 fontFamily = TiroBanglaFontFamily
             )
@@ -1057,23 +1067,24 @@ private fun StaticRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SettingIcon(icon = icon, selected = false)
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 title,
-                fontSize = 15.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = HomeTextPrimary,
                 fontFamily = TiroBanglaFontFamily
             )
             Text(
                 subtitle,
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Normal,
                 color = CalculatorFieldText,
                 fontFamily = TiroBanglaFontFamily
             )
@@ -1098,7 +1109,7 @@ private fun SettingIcon(icon: ImageVector, selected: Boolean) {
         Icon(
             icon,
             contentDescription = null,
-            modifier = Modifier.padding(9.dp).size(20.dp),
+            modifier = Modifier.padding(6.dp).size(16.dp),
             tint = if (selected) MaterialTheme.colorScheme.onPrimary else CalculatorMutedSoft
         )
     }
@@ -1106,8 +1117,8 @@ private fun SettingIcon(icon: ImageVector, selected: Boolean) {
 
 private fun Context.getAppVersionName(): String {
     return runCatching {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.1.19"
-    }.getOrDefault("1.1.19")
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.1.20"
+    }.getOrDefault("1.1.20")
 }
 
 private const val FacebookPageUrl =

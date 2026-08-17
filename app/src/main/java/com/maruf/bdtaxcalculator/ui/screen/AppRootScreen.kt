@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,12 +19,14 @@ import androidx.navigation.compose.rememberNavController
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 
 sealed class Screen(val route: String) {
+    data object Onboarding : Screen("onboarding")
     data object Home : Screen("home")
     data object TaxCalculator : Screen("tax_calculator")
     data object AuditChecker : Screen("audit_checker")
     data object NbrTinCheck : Screen("nbr_tin_check")
     data object TaxFaq : Screen("tax_faq")
     data object TaxNotices : Screen("tax_notices")
+    data object LawyerBooking : Screen("lawyer_booking")
     data object Profile : Screen("profile")
 }
 
@@ -40,7 +41,7 @@ internal val FloatingBottomBarSafePadding = 112.dp
 
 private fun NavHostController.navigateToBottomTab(route: String) {
     navigate(route) {
-        popUpTo(graph.findStartDestination().id) {
+        popUpTo(Screen.Home.route) {
             saveState = true
         }
         launchSingleTop = true
@@ -50,6 +51,8 @@ private fun NavHostController.navigateToBottomTab(route: String) {
 
 @Composable
 fun AppRootScreen(
+    hasCompletedOnboarding: Boolean,
+    onOnboardingCompleted: () -> Unit,
     language: String,
     themeMode: String,
     onLanguageChange: (String) -> Unit,
@@ -67,11 +70,13 @@ fun AppRootScreen(
 
     LaunchedEffect(currentRoute) {
         val screenName = when (currentRoute) {
+            Screen.Onboarding.route -> "onboarding"
             Screen.TaxCalculator.route -> "tax_calculator"
             Screen.AuditChecker.route -> "audit_checker"
             Screen.NbrTinCheck.route -> "nbr_tin_check"
             Screen.TaxFaq.route -> "tax_faq"
             Screen.TaxNotices.route -> "tax_notices"
+            Screen.LawyerBooking.route -> "lawyer_booking"
             Screen.Profile.route -> "settings"
             else -> "home"
         }
@@ -81,9 +86,21 @@ fun AppRootScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = if (hasCompletedOnboarding) Screen.Home.route else Screen.Onboarding.route,
             modifier = Modifier.fillMaxSize()
         ) {
+            composable(Screen.Onboarding.route) {
+                OnboardingScreen(
+                    onStartCalculation = {
+                        onOnboardingCompleted()
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
             composable(Screen.Home.route) {
                 HomeScreen(
                     onOpenTaxCalculator = { navController.navigateToBottomTab(Screen.TaxCalculator.route) },
@@ -91,6 +108,7 @@ fun AppRootScreen(
                     onOpenNbrTinCheck = { navController.navigate(Screen.NbrTinCheck.route) },
                     onOpenTaxFaq = { navController.navigate(Screen.TaxFaq.route) },
                     onOpenNotices = { navController.navigate(Screen.TaxNotices.route) },
+                    onOpenLawyerBooking = { navController.navigate(Screen.LawyerBooking.route) },
                     onOpenHome = { /* Already here */ },
                     onOpenProfile = { navController.navigateToBottomTab(Screen.Profile.route) },
                     selectedDestination = AppDestination.Home
@@ -125,6 +143,12 @@ fun AppRootScreen(
                 )
             }
 
+            composable(Screen.LawyerBooking.route) {
+                LawyerBookingScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     language = language,
@@ -138,7 +162,7 @@ fun AppRootScreen(
             }
         }
 
-        if (!isKeyboardOpen) {
+        if (!isKeyboardOpen && currentRoute != null && currentRoute != Screen.Onboarding.route) {
             HomeBottomNavigation(
                 selectedDestination = when (currentRoute) {
                     Screen.TaxCalculator.route -> AppDestination.TaxCalculator

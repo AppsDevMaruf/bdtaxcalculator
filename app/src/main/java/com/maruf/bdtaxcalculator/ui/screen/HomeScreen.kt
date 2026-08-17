@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Security
@@ -82,6 +83,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -133,6 +135,7 @@ fun HomeScreen(
     onOpenNbrTinCheck: () -> Unit,
     onOpenTaxFaq: () -> Unit,
     onOpenNotices: () -> Unit,
+    onOpenLawyerBooking: () -> Unit,
     onOpenHome: () -> Unit,
     onOpenProfile: () -> Unit,
     selectedDestination: AppDestination
@@ -203,6 +206,12 @@ fun HomeScreen(
                     onClick = {
                         FirebaseTracker.logHomeServiceOpened("tax_calculator")
                         onOpenTaxCalculator()
+                    }
+                )
+                LawyerConsultationShortcut(
+                    onClick = {
+                        FirebaseTracker.logHomeServiceOpened("lawyer_booking")
+                        onOpenLawyerBooking()
                     }
                 )
             }
@@ -652,6 +661,7 @@ private fun TaxCalculatorHero(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(30.dp))
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -659,8 +669,7 @@ private fun TaxCalculatorHero(onClick: () -> Unit) {
                         CalculatorHeroMiddle,
                         Color(0xFF15944B)
                     )
-                ),
-                shape = RoundedCornerShape(30.dp)
+                )
             )
             .noRippleClickable(onClick = onClick)
     ) {
@@ -1019,6 +1028,155 @@ private fun QuickNoticeShortcut(
                     tint = HomeActionBlue,
                     modifier = Modifier.padding(9.dp).size(18.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LawyerConsultationShortcut(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .noRippleClickable(onClick = onClick),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        listOf(
+                            Color(0xFF123E27),
+                            CalculatorHeroMiddle,
+                            Color(0xFF13864A)
+                        )
+                    )
+                )
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 34.dp, y = (-48).dp)
+                    .size(150.dp)
+                    .background(Color(0x24FFD54F), CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 62.dp, y = 62.dp)
+                    .size(150.dp)
+                    .background(Color.White.copy(alpha = 0.06f), CircleShape)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(13.dp)
+                ) {
+                    Surface(
+                        color = Color.White.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+                    ) {
+                        Icon(
+                            Icons.Default.Gavel,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.padding(14.dp).size(27.dp)
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Surface(
+                            color = Color(0xFFFFD54F),
+                            shape = RoundedCornerShape(999.dp)
+                        ) {
+                            Text(
+                                text = localizedText("নতুন সেবা", "NEW SERVICE"),
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                color = Color(0xFF17351F),
+                                fontSize = 9.sp,
+                                lineHeight = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = TiroBanglaFontFamily
+                            )
+                        }
+                        Text(
+                            text = localizedText("ট্যাক্স আইনজীবীর পরামর্শ", "Tax Lawyer Consultation"),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            lineHeight = 23.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = TiroBanglaFontFamily,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = localizedText(
+                                "আয়কর · ভ্যাট · কোম্পানি আইন",
+                                "Tax · VAT · Company law"
+                            ),
+                            color = Color.White.copy(alpha = 0.76f),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            fontFamily = TiroBanglaFontFamily
+                        )
+                    }
+                }
+
+                Text(
+                    text = localizedText(
+                        "সুবিধামতো তারিখ ও সময় দিয়ে WhatsApp-এ পরামর্শের অনুরোধ পাঠান।",
+                        "Choose a convenient date and time, then send your request through WhatsApp."
+                    ),
+                    color = Color.White.copy(alpha = 0.82f),
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    fontFamily = TiroBanglaFontFamily
+                )
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.White.copy(alpha = 0.96f),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 15.dp, top = 2.dp, end = 8.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = localizedText("পরামর্শের অনুরোধ করুন", "Request consultation"),
+                            color = Color(0xFF0B5C35),
+                            fontSize = 14.sp,
+                            lineHeight = 19.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = TiroBanglaFontFamily
+                        )
+                        Surface(color = Color(0xFFE6F2EC), shape = CircleShape) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = localizedText(
+                                    "আইনজীবী সেবা খুলুন",
+                                    "Open lawyer service"
+                                ),
+                                tint = Color(0xFF0B6A3C),
+                                modifier = Modifier.padding(9.dp).size(19.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
