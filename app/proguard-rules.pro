@@ -15,6 +15,13 @@
 # these, but keeping them explicit avoids fragile release-only startup issues.
 -keep class com.maruf.bdtaxcalculator.BDTaxApplication { *; }
 -keep class com.maruf.bdtaxcalculator.firebase.TaxProMessagingService { *; }
+-keep class com.maruf.bdtaxcalculator.tiktok.TikTokEventsTracker { *; }
+
+# TikTok App Events SDK uses runtime-loaded event/config classes.
+-keep class com.tiktok.** { *; }
+-keep class com.android.billingclient.api.** { *; }
+-keep class androidx.lifecycle.** { *; }
+-dontwarn com.tiktok.**
 
 # Keep Parcelable creators if Parcelable models are added later.
 -keepclassmembers class * implements android.os.Parcelable {

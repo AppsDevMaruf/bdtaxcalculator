@@ -174,33 +174,46 @@ private fun OnboardingPage(page: OnboardingPageData) {
             .padding(horizontal = 24.dp)
     ) {
         val compact = maxHeight < 680.dp
-        val illustrationHeight = if (compact) 190.dp else 270.dp
-        val topPadding = if (compact) 34.dp else 96.dp
+        val illustrationHeight = when {
+            compact -> 178.dp
+            maxHeight < 820.dp -> 236.dp
+            else -> 258.dp
+        }
+        val topPadding = when {
+            compact -> 26.dp
+            maxHeight < 820.dp -> 56.dp
+            else -> 76.dp
+        }
+        val illustrationToTitleSpace = when {
+            compact -> 22.dp
+            maxHeight < 820.dp -> 54.dp
+            else -> 68.dp
+        }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = topPadding, bottom = 190.dp),
+                .padding(top = topPadding, bottom = if (compact) 126.dp else 146.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OnboardingIllustration(type = page.illustration, height = illustrationHeight)
-            Spacer(Modifier.height(if (compact) 28.dp else 96.dp))
+            Spacer(Modifier.height(illustrationToTitleSpace))
             Text(
                 text = localizedText(page.titleBn, page.titleEn),
                 color = CalculatorInk,
-                fontSize = if (compact) 24.sp else 27.sp,
-                lineHeight = if (compact) 32.sp else 36.sp,
+                fontSize = if (compact) 23.sp else 27.sp,
+                lineHeight = if (compact) 31.sp else 35.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = TiroBanglaFontFamily,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(if (compact) 8.dp else 14.dp))
+            Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
             Text(
                 text = localizedText(page.descriptionBn, page.descriptionEn),
                 modifier = Modifier.fillMaxWidth(0.94f),
                 color = CalculatorMuted,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
+                fontSize = if (compact) 13.sp else 14.sp,
+                lineHeight = if (compact) 20.sp else 22.sp,
                 fontFamily = TiroBanglaFontFamily,
                 textAlign = TextAlign.Center
             )

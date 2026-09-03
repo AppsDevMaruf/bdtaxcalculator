@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Security
@@ -292,6 +293,13 @@ fun HomeScreen(
                     }
                 )
             }
+
+            SourceDisclaimerCard(
+                onOpenNBR = {
+                    FirebaseTracker.logEvent("home_nbr_source_opened")
+                    uriHandler.openUri(NbrWebsiteUrl)
+                }
+            )
         }
     }
 
@@ -317,6 +325,63 @@ fun HomeScreen(
                     AppNotificationStore.clear(context)
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun SourceDisclaimerCard(onOpenNBR: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = CalculatorPanel,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, CalculatorSuccess.copy(alpha = 0.22f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(color = HomeSoftGreen, shape = RoundedCornerShape(12.dp)) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    tint = CalculatorSuccess,
+                    modifier = Modifier.padding(10.dp).size(18.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = localizedText("উৎস ও ডিসক্লেইমার", "Source & disclaimer"),
+                    color = HomeTextPrimary,
+                    fontSize = 13.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    text = localizedText(
+                        "BD Tax Calculator একটি স্বাধীন অ্যাপ। এটি NBR বা কোনো সরকারি প্রতিষ্ঠানের সাথে সংযুক্ত, অনুমোদিত বা প্রতিনিধিত্বকারী নয়। তথ্য পাবলিক NBR উৎসের ভিত্তিতে আনুমানিক হিসাবের সহায়তার জন্য।",
+                        "BD Tax Calculator is an independent app. It is not affiliated with, endorsed by, or authorized by NBR or any government entity. Information is based on public NBR sources and is provided for estimation help."
+                    ),
+                    color = HomeTextMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    text = localizedText("Official source: nbr.gov.bd", "Official source: nbr.gov.bd"),
+                    color = CalculatorSuccess,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = TiroBanglaFontFamily,
+                    modifier = Modifier.noRippleClickable(onClick = onOpenNBR)
+                )
+            }
         }
     }
 }
@@ -1205,6 +1270,8 @@ private val importantGovtLinks = listOf(
     GovtLink("e-Return", "e-Return", "https://etaxnbr.gov.bd", "e_return", Icons.Default.UploadFile),
     GovtLink("রিটার্ন যাচাই", "Return Verify", "https://etaxnbr.gov.bd", "return_verify", Icons.Default.Verified)
 )
+
+private const val NbrWebsiteUrl = "https://nbr.gov.bd"
 
 @Composable
 private fun ImportantGovtLinksCard(

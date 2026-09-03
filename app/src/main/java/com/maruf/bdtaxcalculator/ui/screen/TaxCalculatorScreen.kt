@@ -1,5 +1,11 @@
 package com.maruf.bdtaxcalculator.ui.screen
 
+import android.content.ClipData
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -9,6 +15,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +62,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -71,6 +79,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,15 +95,21 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
+import com.maruf.bdtaxcalculator.pdf.TaxPdfGenerator
+import com.maruf.bdtaxcalculator.pdf.TaxPdfReport
+import com.maruf.bdtaxcalculator.pdf.buildTaxPdfInvestments
 import com.maruf.bdtaxcalculator.tax.InvestmentInputData
 import com.maruf.bdtaxcalculator.tax.LocalTaxPreferenceStore
 import com.maruf.bdtaxcalculator.tax.SalaryBreakdown
@@ -115,6 +130,8 @@ import com.maruf.bdtaxcalculator.tax.calculateTaxPaymentAdjustment
 import com.maruf.bdtaxcalculator.tax.calculateTaxSummary
 import com.maruf.bdtaxcalculator.tax.formatBengaliNumber
 import com.maruf.bdtaxcalculator.tax.formatBengaliPercent
+import com.maruf.bdtaxcalculator.ui.AppUiPreferences
+import com.maruf.bdtaxcalculator.ui.LocalAppLanguage
 import com.maruf.bdtaxcalculator.ui.localizedText
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorAccentSoft
 import com.maruf.bdtaxcalculator.ui.theme.CalculatorBackground
@@ -139,6 +156,9 @@ import com.maruf.bdtaxcalculator.ui.theme.HomeNavInactive
 import com.maruf.bdtaxcalculator.ui.theme.TiroBanglaFontFamily
 import com.maruf.utils.noRippleClickable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
     save = { list -> list.associate { it.type to it.amount } },
@@ -290,6 +310,8 @@ fun TaxCalculatorScreen(
     onRequestInAppReview: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val appLanguage = LocalAppLanguage.current
+    val coroutineScope = rememberCoroutineScope()
     val hideKeyboardOnScrollConnection = rememberKeyboardDismissOnScrollConnection()
     val defaultTaxpayerType = remember(context) {
         LocalTaxPreferenceStore.getDefaultTaxpayerType(context)
@@ -313,6 +335,7 @@ fun TaxCalculatorScreen(
     var adjustableSourceTax by rememberSaveable { mutableStateOf("") }
     var advanceTax by rememberSaveable { mutableStateOf("") }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
+    var showResetConfirmation by rememberSaveable { mutableStateOf(false) }
     var hasLoggedTaxCalculation by rememberSaveable { mutableStateOf(false) }
     var hasLoggedTaxCreditUsage by rememberSaveable { mutableStateOf(false) }
     var investments by rememberSaveable(stateSaver = investmentSaver) {
@@ -355,6 +378,101 @@ fun TaxCalculatorScreen(
         totalIncome = salaryBreakdown.totalIncome,
         taxAfterRebate = result.taxAfterRebate
     )
+    val pdfReport = TaxPdfReport(
+        isBangla = appLanguage == AppUiPreferences.languageBangla,
+        taxpayerType = currentType.localizedLabel(yearRules.incomeYear == TaxYearCatalog.current.incomeYear),
+        assessmentType = assessmentTypeLabel(selectedAssessmentType),
+        taxpayerLocation = taxpayerLocation.localizedLabel(),
+        disabledDependentCount = disabledDependentCount,
+        effectiveTaxFreeLimit = effectiveTaxFreeLimit,
+        rules = yearRules,
+        salary = salaryBreakdown,
+        investments = buildTaxPdfInvestments(investments) { it.title },
+        result = result,
+        payment = paymentAdjustment
+    )
+    var pendingPdfReport by remember { mutableStateOf<TaxPdfReport?>(null) }
+    val pdfSavedMessage = localizedText("PDF সফলভাবে সংরক্ষণ হয়েছে", "PDF saved successfully")
+    val pdfFailedMessage = localizedText("PDF সংরক্ষণ করা যায়নি", "Could not save PDF")
+    val pdfShareFailedMessage = localizedText("PDF শেয়ার করা যায়নি", "Could not share PDF")
+    val pdfShareTitle = localizedText("ট্যাক্স রিপোর্ট শেয়ার করুন", "Share tax report")
+    val savePdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        val report = pendingPdfReport
+        pendingPdfReport = null
+        if (uri != null && report != null) {
+            coroutineScope.launch {
+                val saved = runCatching {
+                    withContext(Dispatchers.IO) {
+                        TaxPdfGenerator.write(context, uri, report)
+                    }
+                }.isSuccess
+                Toast.makeText(
+                    context,
+                    if (saved) pdfSavedMessage else pdfFailedMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+                if (saved) FirebaseTracker.logEvent("tax_pdf_downloaded")
+            }
+        }
+    }
+    val canDownloadPdf = salaryBreakdown.totalIncome > 0L
+    val downloadPdfReport = {
+        pendingPdfReport = pdfReport
+        savePdfLauncher.launch(TaxPdfGenerator.suggestedFileName(pdfReport))
+    }
+    var isPreparingPdfShare by remember { mutableStateOf(false) }
+    val sharePdfReport = {
+        if (!isPreparingPdfShare) {
+            isPreparingPdfShare = true
+            coroutineScope.launch {
+                val shareIntent = runCatching {
+                    val fileName = TaxPdfGenerator.suggestedFileName(pdfReport)
+                    val sharedFile = withContext(Dispatchers.IO) {
+                        val reportDirectory = context.cacheDir.resolve("shared_tax_reports")
+                        TaxPdfGenerator.write(context, reportDirectory.resolve(fileName), pdfReport)
+                        reportDirectory.resolve(fileName)
+                    }
+                    val contentUri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        sharedFile
+                    )
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                        clipData = ClipData.newUri(context.contentResolver, fileName, contentUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                }.getOrNull()
+
+                isPreparingPdfShare = false
+                if (shareIntent != null) {
+                    context.startActivity(Intent.createChooser(shareIntent, pdfShareTitle))
+                    FirebaseTracker.logEvent("tax_pdf_shared")
+                } else {
+                    Toast.makeText(context, pdfShareFailedMessage, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    val resetCalculation = {
+        grossSalary = ""
+        yearlyBonus = ""
+        selectedType = defaultTaxpayerType
+        selectedAssessmentType = defaultAssessmentType
+        selectedIncomeYear = defaultIncomeYear
+        selectedTaxpayerLocationId = defaultTaxpayerLocation.id
+        disabledDependentCount = 0
+        adjustableSourceTax = ""
+        advanceTax = ""
+        investments = emptyList()
+        pendingPdfReport = null
+        hasLoggedTaxCalculation = false
+        hasLoggedTaxCreditUsage = false
+        coroutineScope.launch { scrollState.scrollTo(0) }
+    }
 
     LaunchedEffect(salaryBreakdown.totalIncome, result.taxAfterRebate) {
         if (salaryBreakdown.totalIncome > 0L) {
@@ -374,30 +492,34 @@ fun TaxCalculatorScreen(
         }
     }
 
+    if (showResetConfirmation) {
+        ResetCalculationConfirmationSheet(
+            onDismiss = { showResetConfirmation = false },
+            onConfirm = {
+                showResetConfirmation = false
+                resetCalculation()
+                FirebaseTracker.logEvent("tax_calculator_reset_confirmed")
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
                 onBack = onBack,
                 yearRules = yearRules,
-                onReset = {
-                    grossSalary = ""
-                    yearlyBonus = ""
-                    selectedType = defaultTaxpayerType
-                    selectedAssessmentType = defaultAssessmentType
-                    selectedIncomeYear = defaultIncomeYear
-                    selectedTaxpayerLocationId = defaultTaxpayerLocation.id
-                    disabledDependentCount = 0
-                    adjustableSourceTax = ""
-                    advanceTax = ""
-                    investments = emptyList()
-                },
-                onInfoClick = { showInfoDialog = true }
+                onReset = { showResetConfirmation = true },
+                onInfoClick = { showInfoDialog = true },
+                canExportPdf = canDownloadPdf,
+                onSharePdf = sharePdfReport,
+                onDownloadPdf = downloadPdfReport,
+                isPreparingPdfShare = isPreparingPdfShare
             )
         },
         containerColor = CalculatorBackground,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues = paddingValues)
@@ -408,121 +530,222 @@ fun TaxCalculatorScreen(
                 )
                 .imePadding()
         ) {
-            if (showInfoDialog) {
-                TaxInfoDialog(yearRules = yearRules, onDismiss = { showInfoDialog = false })
-            }
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (showInfoDialog) {
+                    TaxInfoDialog(yearRules = yearRules, onDismiss = { showInfoDialog = false })
+                }
 
-            // Fixed Header
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                CalculatorOverviewCard(
-                    yearRules = yearRules,
-                    currentType = currentType,
-                    salaryBreakdown = salaryBreakdown,
-                    summary = summary,
-                    taxResult = result,
-                    paymentAdjustment = paymentAdjustment,
-                    totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
-                )
-            }
+                // Fixed Header
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    CalculatorOverviewCard(
+                        yearRules = yearRules,
+                        currentType = currentType,
+                        salaryBreakdown = salaryBreakdown,
+                        summary = summary,
+                        taxResult = result,
+                        paymentAdjustment = paymentAdjustment,
+                        totalInvestment = investments.sumOf { it.amount.toLongOrNull() ?: 0L }
+                    )
+                }
 
-            // Scrollable Content
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .nestedScroll(hideKeyboardOnScrollConnection)
-                    .verticalScroll(scrollState)
-                    .padding(
-                        PaddingValues(
-                            start = 16.dp,
-                            top = 4.dp,
-                            end = 16.dp,
-                            bottom = FloatingBottomBarSafePadding
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .nestedScroll(hideKeyboardOnScrollConnection)
+                        .verticalScroll(scrollState)
+                        .padding(
+                            PaddingValues(
+                                start = 16.dp,
+                                top = 4.dp,
+                                end = 16.dp,
+                                bottom = FloatingBottomBarSafePadding
+                            )
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CalculatorInputHub(
+                        yearRules = yearRules,
+                        selectedIncomeYear = selectedIncomeYear,
+                        onIncomeYearChange = {
+                            selectedIncomeYear = it
+                            LocalTaxPreferenceStore.setIncomeYear(context, it)
+                        },
+                        taxpayerTypes = taxpayerTypes,
+                        selectedType = selectedType,
+                        onTypeSelect = {
+                            selectedType = it
+                            LocalTaxPreferenceStore.setDefaultTaxpayerType(context, it)
+                        },
+                        disabledDependentCount = disabledDependentCount,
+                        onDisabledDependentCountChange = {
+                            disabledDependentCount = it.coerceIn(0, MaxDisabledDependentCount)
+                        },
+                        assessmentType = selectedAssessmentType,
+                        onAssessmentTypeChange = {
+                            selectedAssessmentType = it
+                            LocalTaxPreferenceStore.setAssessmentType(context, it)
+                        },
+                        selectedMinimumTax = minimumTax,
+                        taxpayerLocation = taxpayerLocation,
+                        onTaxpayerLocationChange = {
+                            selectedTaxpayerLocationId = it.id
+                            LocalTaxPreferenceStore.setTaxpayerLocation(context, it)
+                        },
+                        grossSalary = grossSalary,
+                        yearlyBonus = yearlyBonus,
+                        onGrossSalaryChange = { grossSalary = it },
+                        onYearlyBonusChange = { yearlyBonus = it },
+                    )
+
+                    if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
+                        TaxPaymentAdjustmentCard(
+                            adjustment = paymentAdjustment,
+                            adjustableSourceTax = adjustableSourceTax,
+                            advanceTax = advanceTax,
+                            onAdjustableSourceTaxChange = { adjustableSourceTax = it },
+                            onAdvanceTaxChange = { advanceTax = it }
                         )
-                    ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                CalculatorInputHub(
-                    yearRules = yearRules,
-                    selectedIncomeYear = selectedIncomeYear,
-                    onIncomeYearChange = {
-                        selectedIncomeYear = it
-                        LocalTaxPreferenceStore.setIncomeYear(context, it)
-                    },
-                    taxpayerTypes = taxpayerTypes,
-                    selectedType = selectedType,
-                    onTypeSelect = {
-                        selectedType = it
-                        LocalTaxPreferenceStore.setDefaultTaxpayerType(context, it)
-                    },
-                    disabledDependentCount = disabledDependentCount,
-                    onDisabledDependentCountChange = {
-                        disabledDependentCount = it.coerceIn(0, MaxDisabledDependentCount)
-                    },
-                    assessmentType = selectedAssessmentType,
-                    onAssessmentTypeChange = {
-                        selectedAssessmentType = it
-                        LocalTaxPreferenceStore.setAssessmentType(context, it)
-                    },
-                    selectedMinimumTax = minimumTax,
-                    taxpayerLocation = taxpayerLocation,
-                    onTaxpayerLocationChange = {
-                        selectedTaxpayerLocationId = it.id
-                        LocalTaxPreferenceStore.setTaxpayerLocation(context, it)
-                    },
-                    grossSalary = grossSalary,
-                    yearlyBonus = yearlyBonus,
-                    onGrossSalaryChange = { grossSalary = it },
-                    onYearlyBonusChange = { yearlyBonus = it },
-                )
-
-                if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
-                    TaxPaymentAdjustmentCard(
-                        adjustment = paymentAdjustment,
-                        adjustableSourceTax = adjustableSourceTax,
-                        advanceTax = advanceTax,
-                        onAdjustableSourceTaxChange = { adjustableSourceTax = it },
-                        onAdvanceTaxChange = { advanceTax = it }
-                    )
-                }
-
-                SalaryBreakdownCard(salaryBreakdown)
-
-                InvestmentInputSection(
-                    investments = investments,
-                    onInvestmentAdd = { type ->
-                        val option = TaxDefaults.investmentOptions.firstOrNull { it.type == type }
-                        if (option != null && investments.none { it.type == type }) {
-                            investments = investments + option
-                        }
-                    },
-                    onInvestmentChange = { type, value ->
-                        investments = investments.map {
-                            if (it.type == type) it.copy(amount = value) else it
-                        }
-                    },
-                    onInvestmentRemove = { type ->
-                        investments = investments.filterNot { it.type == type }
                     }
-                )
 
-                if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
-                    InvestmentSummaryCard(
-                        taxableIncome = salaryBreakdown.taxableIncome,
+                    SalaryBreakdownCard(salaryBreakdown)
+
+                    InvestmentInputSection(
                         investments = investments,
-                        earnedRebate = investmentRebate,
-                        yearRules = yearRules
+                        onInvestmentAdd = { type ->
+                            val option = TaxDefaults.investmentOptions.firstOrNull { it.type == type }
+                            if (option != null && investments.none { it.type == type }) {
+                                investments = investments + option
+                            }
+                        },
+                        onInvestmentChange = { type, value ->
+                            investments = investments.map {
+                                if (it.type == type) it.copy(amount = value) else it
+                            }
+                        },
+                        onInvestmentRemove = { type ->
+                            investments = investments.filterNot { it.type == type }
+                        }
                     )
-                }
 
-                if (salaryBreakdown.taxableIncome <= effectiveTaxFreeLimit) {
-                    TaxFreeCard(
-                        limit = effectiveTaxFreeLimit
-                    )
-                } else {
-                    TaxBreakdownCard(result = result)
+                    if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
+                        InvestmentSummaryCard(
+                            taxableIncome = salaryBreakdown.taxableIncome,
+                            investments = investments,
+                            earnedRebate = investmentRebate,
+                            yearRules = yearRules
+                        )
+                    }
+
+                    if (salaryBreakdown.taxableIncome <= effectiveTaxFreeLimit) {
+                        TaxFreeCard(
+                            limit = effectiveTaxFreeLimit
+                        )
+                    } else {
+                        TaxBreakdownCard(result = result)
+                    }
+
+                    TaxSourceDisclaimerCard()
                 }
+            }
+
+        }
+    }
+}
+
+@Composable
+private fun HeaderPdfActionMenu(
+    onDownload: () -> Unit,
+    onShare: () -> Unit,
+    isPreparingShare: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        Surface(
+            onClick = { if (!isPreparingShare) expanded = !expanded },
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(14.dp),
+            shadowElevation = 1.dp,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(
+                        if (expanded) {
+                            com.maruf.bdtaxcalculator.R.drawable.tax_pdf_action_close
+                        } else {
+                            com.maruf.bdtaxcalculator.R.drawable.tax_pdf_action_main
+                        }
+                    ),
+                    contentDescription = if (expanded) {
+                        localizedText("PDF অপশন বন্ধ করুন", "Close PDF options")
+                    } else {
+                        localizedText("PDF অপশন", "PDF options")
+                    },
+                    alpha = if (isPreparingShare) 0.45f else 1f,
+                    modifier = Modifier.size(34.dp)
+                )
             }
         }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            offset = DpOffset(x = 0.dp, y = 6.dp),
+            shape = RoundedCornerShape(percent = 50),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, CalculatorBorder)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PdfFloatingMenuAction(
+                    iconRes = com.maruf.bdtaxcalculator.R.drawable.tax_pdf_action_share,
+                    label = localizedText("শেয়ার", "Share"),
+                    enabled = !isPreparingShare,
+                    onClick = {
+                        expanded = false
+                        onShare()
+                    }
+                )
+                PdfFloatingMenuAction(
+                    iconRes = com.maruf.bdtaxcalculator.R.drawable.tax_pdf_action_download,
+                    label = localizedText("ডাউনলোড", "Download"),
+                    enabled = !isPreparingShare,
+                    onClick = {
+                        expanded = false
+                        onDownload()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PdfFloatingMenuAction(
+    @DrawableRes iconRes: Int,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = label,
+            alpha = if (enabled) 1f else 0.45f,
+            modifier = Modifier.size(38.dp)
+        )
     }
 }
 
@@ -531,7 +754,11 @@ private fun AppTopBar(
     onBack: (() -> Unit)?,
     yearRules: TaxYearRules,
     onReset: () -> Unit,
-    onInfoClick: () -> Unit
+    onInfoClick: () -> Unit,
+    canExportPdf: Boolean,
+    onSharePdf: () -> Unit,
+    onDownloadPdf: () -> Unit,
+    isPreparingPdfShare: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -563,14 +790,16 @@ private fun AppTopBar(
                 }
             }
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = localizedText("আয়কর ক্যালকুলেটর", "Income Tax Calculator"),
                     fontSize = 16.sp,
                     lineHeight = 19.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = CalculatorInk,
-                    fontFamily = TiroBanglaFontFamily
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = localizedText(
@@ -580,7 +809,9 @@ private fun AppTopBar(
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
                     color = CalculatorMuted,
-                    fontFamily = TiroBanglaFontFamily
+                    fontFamily = TiroBanglaFontFamily,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -596,6 +827,13 @@ private fun AppTopBar(
                 label = localizedText("তথ্য", "Info"),
                 onClick = onInfoClick
             )
+            if (canExportPdf) {
+                HeaderPdfActionMenu(
+                    onDownload = onDownloadPdf,
+                    onShare = onSharePdf,
+                    isPreparingShare = isPreparingPdfShare
+                )
+            }
         }
     }
 }
@@ -613,6 +851,109 @@ private fun HeaderActionButton(icon: ImageVector, label: String, onClick: () -> 
         ) {
             Icon(icon, contentDescription = label, tint = CalculatorSuccess, modifier = Modifier.size(18.dp))
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ResetCalculationConfirmationSheet(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CalculatorPanel,
+        dragHandle = {
+            Surface(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 8.dp)
+                    .size(width = 48.dp, height = 5.dp),
+                shape = RoundedCornerShape(999.dp),
+                color = CalculatorBorder
+            ) {}
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = localizedText("হিসাব রিসেট করবেন?", "Reset this calculation?"),
+                fontSize = 20.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                color = CalculatorInk,
+                fontFamily = TiroBanglaFontFamily,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = localizedText(
+                    "বেতন, বোনাস, কর সমন্বয় ও বিনিয়োগের সব দেওয়া তথ্য মুছে যাবে। এই কাজটি ফিরিয়ে আনা যাবে না।",
+                    "Salary, bonus, tax adjustments and all investment entries will be cleared. This action cannot be undone."
+                ),
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = CalculatorMuted,
+                fontFamily = TiroBanglaFontFamily,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ResetConfirmationAction(
+                    label = localizedText("বাতিল", "Cancel"),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = CalculatorInk,
+                    border = BorderStroke(1.dp, CalculatorBorder),
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                )
+                ResetConfirmationAction(
+                    label = localizedText("রিসেট করুন", "Reset"),
+                    containerColor = CalculatorDanger,
+                    contentColor = Color.White,
+                    border = null,
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResetConfirmationAction(
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+    border: BorderStroke?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = containerColor,
+        border = border
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+            textAlign = TextAlign.Center,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = contentColor,
+            fontFamily = TiroBanglaFontFamily
+        )
     }
 }
 
@@ -1261,7 +1602,7 @@ private fun TaxInfoDialog(yearRules: TaxYearRules, onDismiss: () -> Unit) {
                     BulletInfoRow(localizedText("প্রতিবন্ধী সন্তান/পোষ্য প্রতি করমুক্ত সীমায় আরও ${formatBengaliNumber(yearRules.disabledDependentAllowance)} টাকা যোগ হয়। বাবা-মা উভয়েই করদাতা হলে যেকোনো একজন এই সুবিধা নিতে পারবেন।", "An additional BDT ${formatBengaliNumber(yearRules.disabledDependentAllowance)} tax-free allowance applies for each disabled child/dependent. If both parents are taxpayers, only one may claim it."))
                     BulletInfoRow(localizedText(
                         "আয়বর্ষ ${yearRules.incomeYear} এবং করবর্ষ ${yearRules.assessmentYear}-এর নির্ধারিত স্ল্যাব ব্যবহার করা হয়।",
-                        "The official slabs for income year ${yearRules.incomeYear} and tax year ${yearRules.assessmentYear} are used."
+                        "The selected slabs for income year ${yearRules.incomeYear} and tax year ${yearRules.assessmentYear} are used."
                     ))
                     BulletInfoRow(localizedText(
                         "বিনিয়োগ রিবেট হিসেবে করযোগ্য আয়ের ${formatBengaliNumber((yearRules.incomeBasedInvestmentRebateRate * 100).toLong())}%, প্রকৃত যোগ্য বিনিয়োগের ${formatBengaliNumber((yearRules.investmentRebateRate * 100).toLong())}%, অথবা ${formatBengaliNumber(yearRules.maxInvestmentRebate.toLong())} টাকার মধ্যে কমটি ধরা হয়।",
@@ -1273,7 +1614,54 @@ private fun TaxInfoDialog(yearRules: TaxYearRules, onDismiss: () -> Unit) {
                     ))
                     BulletInfoRow(localizedText("অবশিষ্ট প্রদেয় কর = রিবেটের পর করদায় - সমন্বয়যোগ্য উৎসে কর - পরিশোধিত অগ্রিম কর। অতিরিক্ত credit আলাদাভাবে দেখানো হয়।", "Remaining payable tax = tax liability after rebate - adjustable source tax - advance tax paid. Any excess credit is shown separately."))
                     BulletInfoRow(localizedText("সব হিসাব ডিভাইসেই হয়; আপনার ইনপুট কোনো সার্ভার বা ডেটাবেসে পাঠানো বা সংরক্ষণ করা হয় না।", "All calculations happen on device; your inputs are not sent to or saved on any server or database."))
+                    BulletInfoRow(localizedText(
+                        "BD Tax Calculator একটি স্বাধীন অ্যাপ; এটি NBR বা কোনো সরকারি প্রতিষ্ঠানের সাথে সংযুক্ত, অনুমোদিত বা প্রতিনিধিত্বকারী নয়।",
+                        "BD Tax Calculator is an independent app; it is not affiliated with, endorsed by, or authorized by NBR or any government entity."
+                    ))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaxSourceDisclaimerCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = CalculatorInfoBackground),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, CalculatorInfo.copy(alpha = 0.2f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = CalculatorInfo,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    localizedText("উৎস ও ডিসক্লেইমার", "Source & disclaimer"),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CalculatorInfoDark,
+                    fontFamily = TiroBanglaFontFamily
+                )
+                Text(
+                    localizedText(
+                        "এই অ্যাপ NBR বা কোনো সরকারি প্রতিষ্ঠানের official/authorized app নয়। তথ্য পাবলিক NBR উৎসের ভিত্তিতে আনুমানিক হিসাবের সহায়তার জন্য। Official source: nbr.gov.bd",
+                        "This is not an official or authorized app of NBR or any government entity. Information is based on public NBR sources and provided for estimation help. Official source: nbr.gov.bd"
+                    ),
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    color = CalculatorMuted,
+                    fontFamily = TiroBanglaFontFamily
+                )
             }
         }
     }

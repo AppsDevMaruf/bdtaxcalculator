@@ -34,7 +34,7 @@
     <string name="info_content" formatted="false">• Income year: 2025–26; assessment year: 2026–27\n• Tax-free limits follow the Finance Act 2026\n• Add BDT 50,000 for each disabled child/dependent when eligible\n• Rebate is the lower of 10% eligible investment, 3% taxable income, or BDT 750,000\n• Minimum tax for all locations: BDT 5,000; new taxpayer: BDT 1,000\n• Contact NBR for actual tax submission</string>
 
     <!-- Footer -->
-    <string name="footer_text">Based on Bangladesh National Board of Revenue (NBR) rules</string>
+    <string name="footer_text">Independent app • Official source: nbr.gov.bd</string>
 
     <!-- Content Descriptions -->
     <string name="cd_info">Information</string>

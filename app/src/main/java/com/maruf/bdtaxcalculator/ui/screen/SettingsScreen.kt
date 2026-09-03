@@ -258,10 +258,10 @@ fun ProfileScreen(
             )
             InfoRow(
                 icon = Icons.Default.Language,
-                title = localizedText("সরকারি NBR পোর্টাল", "Official NBR portal"),
+                title = localizedText("NBR ওয়েবসাইট লিংক", "NBR website link"),
                 subtitle = localizedText(
-                    "TIN যাচাইয়ের পেজ সরকারি ওয়েবসাইট থেকে লোড হয়; অ্যাপ তথ্য সংরক্ষণ করে না।",
-                    "TIN check loads the official government website; the app does not store submitted data."
+                    "TIN যাচাইয়ের জন্য NBR ওয়েবসাইট খোলা হয়; অ্যাপ তথ্য সংরক্ষণ করে না।",
+                    "TIN check opens the NBR website; the app does not store submitted data."
                 )
             )
             InfoRow(
@@ -287,8 +287,8 @@ fun ProfileScreen(
         SettingsSection(title = localizedText("তথ্যের উৎস", "Data sources")) {
             Text(
                 localizedText(
-                    "এই অ্যাপের tax rules জাতীয় রাজস্ব বোর্ডের প্রকাশিত আয়কর পরিপত্রের ভিত্তিতে সাজানো। PDF খুলতে নিচের যেকোনো বছর চাপুন।",
-                    "The tax rules in this app are based on income-tax circulars published by the National Board of Revenue. Tap a year to open the PDF."
+                    "BD Tax Calculator একটি স্বাধীন অ্যাপ। এটি National Board of Revenue (NBR) বা কোনো সরকারি প্রতিষ্ঠানের সাথে সংযুক্ত, অনুমোদিত বা প্রতিনিধিত্বকারী নয়। নিচের লিংকগুলো official NBR উৎস।",
+                    "BD Tax Calculator is an independent app. It is not affiliated with, endorsed by, or authorized by the National Board of Revenue (NBR) or any government entity. The links below open official NBR sources."
                 ),
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 fontSize = 10.sp,
@@ -320,8 +320,8 @@ fun ProfileScreen(
                 icon = Icons.Default.Language,
                 title = localizedText("সব আয়কর পরিপত্র", "All income-tax circulars"),
                 subtitle = localizedText(
-                    "NBR-এর official আয়কর পরিপত্র তালিকা খুলুন।",
-                    "Open the official NBR income-tax circular index."
+                    "NBR ওয়েবসাইটের আয়কর পরিপত্র তালিকা খুলুন।",
+                    "Open the income-tax circular index on the NBR website."
                 ),
                 onClick = {
                     FirebaseTracker.logSettingsAction("open_nbr_circular_index")
@@ -331,8 +331,8 @@ fun ProfileScreen(
 
             Text(
                 localizedText(
-                    "নোট: অ্যাপটি প্রাথমিক হিসাবের সহায়ক। রিটার্ন দাখিল বা চূড়ান্ত সিদ্ধান্তের আগে মূল পরিপত্র এবং প্রযোজ্য আইন যাচাই করুন।",
-                    "Note: This app is a calculation aid. Check the original circular and applicable law before filing a return or making a final decision."
+                    "নোট: কর তথ্য পাবলিক NBR উৎসের ভিত্তিতে আনুমানিক হিসাবের সহায়তার জন্য। রিটার্ন দাখিল বা চূড়ান্ত সিদ্ধান্তের আগে মূল পরিপত্র এবং প্রযোজ্য আইন যাচাই করুন।",
+                    "Note: Tax information is based on public NBR sources and provided for estimation help. Check the original circular and applicable law before filing a return or making a final decision."
                 ),
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                 fontSize = 10.sp,
@@ -422,8 +422,8 @@ fun ProfileScreen(
 
         Text(
             localizedText(
-                "বাংলাদেশ জাতীয় রাজস্ব বোর্ড (NBR) অনুযায়ী",
-                "Based on Bangladesh National Board of Revenue (NBR) rules"
+                "স্বাধীন অ্যাপ • Official source: nbr.gov.bd",
+                "Independent app • Official source: nbr.gov.bd"
             ),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,

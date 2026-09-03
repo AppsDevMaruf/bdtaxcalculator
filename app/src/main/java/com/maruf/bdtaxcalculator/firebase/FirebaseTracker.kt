@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.maruf.bdtaxcalculator.tiktok.TikTokEventsTracker
 
 object FirebaseTracker {
     private const val PARAM_LANGUAGE = "language"
@@ -29,6 +30,7 @@ object FirebaseTracker {
 
     fun logAppOpened() {
         analytics?.logEvent(FirebaseAnalytics.Event.APP_OPEN, null)
+        TikTokEventsTracker.logEvent("app_open")
     }
 
     fun logScreen(screenName: String) {
@@ -43,6 +45,7 @@ object FirebaseTracker {
 
     fun logEvent(name: String, params: Bundle? = null) {
         analytics?.logEvent(name, params)
+        TikTokEventsTracker.logEvent(name, params)
     }
 
     fun syncPreferenceProperties(
