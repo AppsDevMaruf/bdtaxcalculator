@@ -12,7 +12,11 @@ class BDTaxApplication : Application() {
         FirebaseApp.initializeApp(this)
         AppNotificationChannels.createDefaultChannel(this)
         FirebaseTracker.initialize(this)
-        TikTokEventsTracker.initialize(this)
+        val isTikTokInitialized = TikTokEventsTracker.initialize(
+            context = this,
+            onFailure = FirebaseTracker::recordNonFatal
+        )
+        FirebaseTracker.setSdkInitialized("tiktok", isTikTokInitialized)
         FirebaseTracker.logAppOpened()
     }
 }

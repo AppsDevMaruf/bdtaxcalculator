@@ -50,6 +50,12 @@
         </provider>
 
         <activity
+            android:name=".pdf.PdfOpenActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"

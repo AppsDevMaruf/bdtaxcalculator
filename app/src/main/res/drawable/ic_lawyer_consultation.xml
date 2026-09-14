@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <!-- Outline scales and a consultation bubble, redrawn from the UI reference. -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#1D7C38"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M28,12 L28,54 M18,54 L38,54 M10,13 L46,13 M25,13 C25,5 31,5 31,13 M10,14 L2,35 L18,35 Z M2,35 C3,45 17,45 18,35 M46,14 L40,29 M46,14 L52,29" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#1D7C38"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M40,34 L56,34 Q60,34 60,38 L60,48 Q60,52 56,52 L54,52 L54,59 L47,52 L40,52 Q36,52 36,48 L36,38 Q36,34 40,34 Z" />
+    <path
+        android:fillColor="#1D7C38"
+        android:pathData="M41,43 m-1.4,0 a1.4,1.4 0,1 0,2.8 0 a1.4,1.4 0,1 0,-2.8 0 M48,43 m-1.4,0 a1.4,1.4 0,1 0,2.8 0 a1.4,1.4 0,1 0,-2.8 0 M55,43 m-1.4,0 a1.4,1.4 0,1 0,2.8 0 a1.4,1.4 0,1 0,-2.8 0" />
+</vector>

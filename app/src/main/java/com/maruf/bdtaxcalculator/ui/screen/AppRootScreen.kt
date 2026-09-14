@@ -39,6 +39,13 @@ enum class AppDestination {
 
 internal val FloatingBottomBarSafePadding = 112.dp
 
+private val topLevelRoutes = setOf(
+    Screen.Home.route,
+    Screen.TaxCalculator.route,
+    Screen.AuditChecker.route,
+    Screen.Profile.route
+)
+
 private fun NavHostController.navigateToBottomTab(route: String) {
     navigate(route) {
         popUpTo(Screen.Home.route) {
@@ -117,7 +124,12 @@ fun AppRootScreen(
 
             composable(Screen.TaxCalculator.route) {
                 TaxCalculatorScreen(
-                    onRequestInAppReview = onRequestInAppReview
+                    onRequestInAppReview = onRequestInAppReview,
+                    onOpenLawyerBooking = {
+                        navController.navigate(Screen.LawyerBooking.route) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
@@ -162,7 +174,7 @@ fun AppRootScreen(
             }
         }
 
-        if (!isKeyboardOpen && currentRoute != null && currentRoute != Screen.Onboarding.route) {
+        if (!isKeyboardOpen && currentRoute in topLevelRoutes) {
             HomeBottomNavigation(
                 selectedDestination = when (currentRoute) {
                     Screen.TaxCalculator.route -> AppDestination.TaxCalculator

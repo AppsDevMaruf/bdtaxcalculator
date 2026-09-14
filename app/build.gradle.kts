@@ -36,8 +36,8 @@ android {
         applicationId = "com.maruf.bdtaxcalculator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 24
-        versionName = "1.1.24"
+        versionCode = 26
+        versionName = "1.1.26"
 
         buildConfigField("String", "TIKTOK_APP_ID", "\"${secretProperty("TIKTOK_APP_ID")}\"")
         buildConfigField("String", "TIKTOK_TT_APP_ID", "\"${secretProperty("TIKTOK_TT_APP_ID")}\"")
@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.lifecycle.common.java8)
     implementation(libs.androidx.activity.compose)

@@ -76,25 +76,36 @@ object FirebaseHomeNewsStore {
         lastRefreshRequestMillis = now
 
         val remoteConfig = FirebaseRemoteConfig.getInstance()
-        remoteConfig.setConfigSettingsAsync(
-            FirebaseRemoteConfigSettings.Builder()
-                .setMinimumFetchIntervalInSeconds(RefreshIntervalSeconds)
-                .build()
-        )
-
         remoteConfig
-            .setDefaultsAsync(
-                mapOf(
-                    KeyEnabled to true,
-                    KeyTextBangla to FallbackBanglaText,
-                    KeyTextEnglish to FallbackEnglishText,
-                    KeyUrl to FallbackUrl,
-                    KeyNoticesJson to noticesToJson(fallbackNotices)
-                )
+            .setConfigSettingsAsync(
+                FirebaseRemoteConfigSettings.Builder()
+                    .setMinimumFetchIntervalInSeconds(RefreshIntervalSeconds)
+                    .build()
             )
+            .continueWithTask {
+                remoteConfig.setDefaultsAsync(
+                    mapOf(
+                        KeyEnabled to true,
+                        KeyTextBangla to FallbackBanglaText,
+                        KeyTextEnglish to FallbackEnglishText,
+                        KeyUrl to FallbackUrl,
+                        KeyNoticesJson to noticesToJson(fallbackNotices)
+                    )
+                )
+            }
             .continueWithTask { remoteConfig.fetchAndActivate() }
-            .addOnCompleteListener {
+            .addOnSuccessListener {
                 newsFlow.value = remoteConfig.toHomeNews()
+                FirebaseTracker.logDiagnostic("Remote Config refresh succeeded")
+            }
+            .addOnFailureListener { throwable ->
+                synchronized(FirebaseHomeNewsStore) {
+                    lastRefreshRequestMillis = 0L
+                }
+                newsFlow.value = remoteConfig.toHomeNews()
+                FirebaseTracker.logDiagnostic(
+                    "Remote Config refresh failed: ${throwable.javaClass.simpleName}"
+                )
             }
     }
 

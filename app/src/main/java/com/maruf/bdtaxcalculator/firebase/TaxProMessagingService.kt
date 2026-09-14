@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -20,7 +19,6 @@ class TaxProMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         FirebaseTracker.setFcmToken(token)
-        Log.d("TAG", "onNewToken: $token")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

@@ -1,9 +1,11 @@
 package com.maruf.bdtaxcalculator.firebase
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.maruf.bdtaxcalculator.BuildConfig
 import com.maruf.bdtaxcalculator.tiktok.TikTokEventsTracker
 
 object FirebaseTracker {
@@ -26,14 +28,24 @@ object FirebaseTracker {
 
     fun initialize(context: Context) {
         analytics = FirebaseAnalytics.getInstance(context.applicationContext)
+        crashlytics.apply {
+            setCustomKey("app_build_type", BuildConfig.BUILD_TYPE)
+            setCustomKey("android_sdk", Build.VERSION.SDK_INT)
+            setCustomKey("device_manufacturer", Build.MANUFACTURER)
+            setCustomKey("device_model", Build.MODEL)
+            log("Firebase tracker initialized")
+        }
     }
 
     fun logAppOpened() {
+        crashlytics.log("App opened")
         analytics?.logEvent(FirebaseAnalytics.Event.APP_OPEN, null)
         TikTokEventsTracker.logEvent("app_open")
     }
 
     fun logScreen(screenName: String) {
+        crashlytics.setCustomKey("current_screen", screenName)
+        crashlytics.log("Screen: $screenName")
         analytics?.logEvent(
             FirebaseAnalytics.Event.SCREEN_VIEW,
             Bundle().apply {
@@ -44,6 +56,7 @@ object FirebaseTracker {
     }
 
     fun logEvent(name: String, params: Bundle? = null) {
+        crashlytics.log("Event: $name")
         analytics?.logEvent(name, params)
         TikTokEventsTracker.logEvent(name, params)
     }
@@ -53,12 +66,17 @@ object FirebaseTracker {
         themeMode: String,
         themePalette: String
     ) {
+        crashlytics.setCustomKey(USER_PROPERTY_LANGUAGE, language)
+        crashlytics.setCustomKey(USER_PROPERTY_THEME_MODE, themeMode)
+        crashlytics.setCustomKey(USER_PROPERTY_DARK_PALETTE, themePalette)
         setUserProperty(USER_PROPERTY_LANGUAGE, language)
         setUserProperty(USER_PROPERTY_THEME_MODE, themeMode)
         setUserProperty(USER_PROPERTY_DARK_PALETTE, themePalette)
     }
 
     fun logLanguageChanged(language: String) {
+        crashlytics.setCustomKey(USER_PROPERTY_LANGUAGE, language)
+        crashlytics.log("Language changed")
         analytics?.logEvent(
             "app_language_changed",
             Bundle().apply { putString(PARAM_LANGUAGE, language) }
@@ -67,6 +85,9 @@ object FirebaseTracker {
     }
 
     fun logThemeModeChanged(themeMode: String, themePalette: String) {
+        crashlytics.setCustomKey(USER_PROPERTY_THEME_MODE, themeMode)
+        crashlytics.setCustomKey(USER_PROPERTY_DARK_PALETTE, themePalette)
+        crashlytics.log("Theme mode changed")
         analytics?.logEvent(
             "app_theme_mode_changed",
             Bundle().apply {
@@ -79,6 +100,8 @@ object FirebaseTracker {
     }
 
     fun logDarkThemePaletteSelected(themePalette: String) {
+        crashlytics.setCustomKey(USER_PROPERTY_DARK_PALETTE, themePalette)
+        crashlytics.log("Dark theme palette changed")
         analytics?.logEvent(
             "dark_theme_palette_selected",
             Bundle().apply { putString(PARAM_PALETTE, themePalette) }
@@ -123,10 +146,21 @@ object FirebaseTracker {
 
     fun setFcmToken(token: String) {
         crashlytics.setCustomKey("fcm_token_available", token.isNotBlank())
+        crashlytics.log("FCM token refreshed")
         analytics?.logEvent("fcm_token_refreshed", null)
     }
 
+    fun setSdkInitialized(name: String, initialized: Boolean) {
+        crashlytics.setCustomKey("${name}_sdk_initialized", initialized)
+        crashlytics.log("$name SDK initialized: $initialized")
+    }
+
+    fun logDiagnostic(message: String) {
+        crashlytics.log(message.take(200))
+    }
+
     fun recordNonFatal(throwable: Throwable) {
+        crashlytics.log("Non-fatal: ${throwable.javaClass.simpleName}")
         crashlytics.recordException(throwable)
     }
 }

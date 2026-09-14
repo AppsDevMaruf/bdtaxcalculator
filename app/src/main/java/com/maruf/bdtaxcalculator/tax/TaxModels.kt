@@ -49,7 +49,8 @@ data class SalaryBreakdown(
     val yearlyBonus: Long,
     val totalIncome: Long,
     val totalExemption: Long,
-    val taxableIncome: Long
+    val taxableIncome: Long,
+    val otherIncome: Long = 0L
 )
 
 data class TaxSummary(

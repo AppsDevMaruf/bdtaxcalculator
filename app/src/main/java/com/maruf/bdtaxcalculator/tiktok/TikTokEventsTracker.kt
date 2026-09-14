@@ -1,27 +1,34 @@
 package com.maruf.bdtaxcalculator.tiktok
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import com.maruf.bdtaxcalculator.BuildConfig
 
 object TikTokEventsTracker {
     private const val PARAM_TEST_EVENT_CODE = "test_event_code"
+    private const val TIKTOK_PREFERENCES = "com.tiktok.sdk.keystore"
+    private const val TIKTOK_USER_AGENT = "com.tiktok.user.agent"
 
     private var isInitialized = false
 
-    fun initialize(context: Context) {
+    fun initialize(
+        context: Context,
+        onFailure: (Throwable) -> Unit = {}
+    ): Boolean {
         val appId = BuildConfig.TIKTOK_APP_ID
         val ttAppId = BuildConfig.TIKTOK_TT_APP_ID
         val appSecret = BuildConfig.TIKTOK_APP_SECRET
-        if (appId.isBlank() || ttAppId.isBlank()) return
+        if (appId.isBlank() || ttAppId.isBlank()) return false
 
-        runCatching {
+        return runCatching {
+            val appContext = context.applicationContext
+            primeSafeUserAgent(appContext)
             val sdkClass = Class.forName("com.tiktok.TikTokBusinessSdk")
             val configClass = findClass(
                 "com.tiktok.TTConfig",
                 "com.tiktok.TikTokBusinessSdk\$TTConfig"
             )
-            val appContext = context.applicationContext
             val config = if (appSecret.isBlank()) {
                 configClass.getConstructor(Context::class.java).newInstance(appContext)
             } else {
@@ -39,7 +46,25 @@ object TikTokEventsTracker {
             sdkClass.methods.firstOrNull { it.name == "startTrack" && it.parameterTypes.isEmpty() }
                 ?.invoke(null)
             isInitialized = true
-        }
+        }.onFailure(onFailure).isSuccess && isInitialized
+    }
+
+    /**
+     * TikTok SDK 1.7.0 otherwise asks WebView for its default user agent during startup.
+     * Some Android 15/16 System WebView builds crash while resolving an internal resource,
+     * before the SDK's exception handling can recover. Priming the SDK's user-agent
+     * storage up front keeps event tracking active without initializing WebView.
+     */
+    private fun primeSafeUserAgent(context: Context) {
+        val preferences = context.getSharedPreferences(TIKTOK_PREFERENCES, Context.MODE_PRIVATE)
+        if (!preferences.getString(TIKTOK_USER_AGENT, null).isNullOrBlank()) return
+
+        val userAgent = System.getProperty("http.agent")
+            ?.takeIf(String::isNotBlank)
+            ?: "Dalvik/${System.getProperty("java.vm.version").orEmpty()} " +
+                "(Linux; U; Android ${Build.VERSION.RELEASE}; ${Build.MODEL} Build/${Build.ID})"
+
+        preferences.edit().putString(TIKTOK_USER_AGENT, userAgent).apply()
     }
 
     @Suppress("DEPRECATION")

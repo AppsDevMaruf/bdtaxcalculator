@@ -177,10 +177,7 @@ class MainActivity : AppCompatActivity() {
     }
     private fun refreshFcmToken() {
         FirebaseMessaging.getInstance().token
-            .addOnSuccessListener { token ->
-                FirebaseTracker.setFcmToken(token)
-                android.util.Log.d("FCM_TOKEN", token)
-            }
+            .addOnSuccessListener(FirebaseTracker::setFcmToken)
             .addOnFailureListener(FirebaseTracker::recordNonFatal)
     }
 

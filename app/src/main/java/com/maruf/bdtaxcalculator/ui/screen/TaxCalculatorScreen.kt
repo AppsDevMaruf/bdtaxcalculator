@@ -80,8 +80,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -106,8 +104,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.maruf.bdtaxcalculator.firebase.FirebaseTracker
 import com.maruf.bdtaxcalculator.pdf.TaxPdfGenerator
+import com.maruf.bdtaxcalculator.pdf.PdfDownloadNotification
 import com.maruf.bdtaxcalculator.pdf.TaxPdfReport
 import com.maruf.bdtaxcalculator.pdf.buildTaxPdfInvestments
 import com.maruf.bdtaxcalculator.tax.InvestmentInputData
@@ -159,15 +160,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private val investmentSaver: Saver<List<InvestmentInputData>, Any> = mapSaver(
-    save = { list -> list.associate { it.type to it.amount } },
-    restore = { map ->
-        TaxDefaults.investmentOptions.filter { map.containsKey(it.type) }.map {
-            it.copy(amount = (map[it.type] as? String) ?: "")
-        }
-    }
-)
 
 private fun normalizeNumericInput(input: String, maxLength: Int = MaxMoneyInputLength): String {
     return buildString {
@@ -307,7 +299,8 @@ private fun InvestmentInputData.localizedTitle(): String {
 @Composable
 fun TaxCalculatorScreen(
     onBack: (() -> Unit)? = null,
-    onRequestInAppReview: (String) -> Unit = {}
+    onRequestInAppReview: (String) -> Unit = {},
+    onOpenLawyerBooking: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val appLanguage = LocalAppLanguage.current
@@ -325,23 +318,39 @@ fun TaxCalculatorScreen(
     val defaultTaxpayerLocation = remember(context) {
         LocalTaxPreferenceStore.getTaxpayerLocation(context)
     }
-    var grossSalary by rememberSaveable { mutableStateOf("") }
-    var yearlyBonus by rememberSaveable { mutableStateOf("") }
-    var selectedType by rememberSaveable { mutableStateOf(defaultTaxpayerType) }
-    var selectedAssessmentType by rememberSaveable { mutableStateOf(defaultAssessmentType) }
-    var selectedIncomeYear by rememberSaveable { mutableStateOf(defaultIncomeYear) }
-    var selectedTaxpayerLocationId by rememberSaveable { mutableStateOf(defaultTaxpayerLocation.id) }
-    var disabledDependentCount by rememberSaveable { mutableStateOf(0) }
-    var adjustableSourceTax by rememberSaveable { mutableStateOf("") }
-    var advanceTax by rememberSaveable { mutableStateOf("") }
+    val initialUiState = remember(
+        defaultTaxpayerType,
+        defaultAssessmentType,
+        defaultIncomeYear,
+        defaultTaxpayerLocation
+    ) {
+        TaxCalculatorUiState(
+            selectedTaxpayerType = defaultTaxpayerType,
+            selectedAssessmentType = defaultAssessmentType,
+            selectedIncomeYear = defaultIncomeYear,
+            selectedTaxpayerLocationId = defaultTaxpayerLocation.id
+        )
+    }
+    val calculatorViewModel: TaxCalculatorViewModel = viewModel(
+        factory = TaxCalculatorViewModel.factory(initialUiState)
+    )
+    val uiState by calculatorViewModel.uiState.collectAsStateWithLifecycle()
+    val grossSalary = uiState.grossSalary
+    val yearlyBonus = uiState.yearlyBonus
+    val otherIncome = uiState.otherIncome
+    val selectedType = uiState.selectedTaxpayerType
+    val selectedAssessmentType = uiState.selectedAssessmentType
+    val selectedIncomeYear = uiState.selectedIncomeYear
+    val selectedTaxpayerLocationId = uiState.selectedTaxpayerLocationId
+    val disabledDependentCount = uiState.disabledDependentCount
+    val adjustableSourceTax = uiState.adjustableSourceTax
+    val advanceTax = uiState.advanceTax
+    val investments = uiState.investments
+    var consultationDismissed by rememberSaveable { mutableStateOf(false) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
     var showResetConfirmation by rememberSaveable { mutableStateOf(false) }
     var hasLoggedTaxCalculation by rememberSaveable { mutableStateOf(false) }
     var hasLoggedTaxCreditUsage by rememberSaveable { mutableStateOf(false) }
-    var investments by rememberSaveable(stateSaver = investmentSaver) {
-        mutableStateOf(emptyList())
-    }
-
     val scrollState = rememberScrollState()
     val yearRules = remember(selectedIncomeYear) { TaxYearCatalog.find(selectedIncomeYear) }
     val taxpayerTypes = yearRules.taxpayerTypes
@@ -359,6 +368,7 @@ fun TaxCalculatorScreen(
     val salaryBreakdown = calculateSalaryBreakdown(
         grossSalary = grossSalary.toLongOrNull() ?: 0L,
         yearlyBonus = yearlyBonus.toLongOrNull() ?: 0L,
+        otherIncome = otherIncome.toLongOrNull() ?: 0L,
         rules = yearRules
     )
     val investmentRebate = calculateInvestmentRebate(investments, salaryBreakdown.taxableIncome, yearRules)
@@ -406,6 +416,12 @@ fun TaxCalculatorScreen(
                 val saved = runCatching {
                     withContext(Dispatchers.IO) {
                         TaxPdfGenerator.write(context, uri, report)
+                        // Retain access so the notification can open the saved document later.
+                        runCatching {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                        }
                     }
                 }.isSuccess
                 Toast.makeText(
@@ -413,7 +429,10 @@ fun TaxCalculatorScreen(
                     if (saved) pdfSavedMessage else pdfFailedMessage,
                     Toast.LENGTH_LONG
                 ).show()
-                if (saved) FirebaseTracker.logEvent("tax_pdf_downloaded")
+                if (saved) {
+                    PdfDownloadNotification.show(context, uri, report.isBangla)
+                    FirebaseTracker.logEvent("tax_pdf_downloaded")
+                }
             }
         }
     }
@@ -458,16 +477,8 @@ fun TaxCalculatorScreen(
         }
     }
     val resetCalculation = {
-        grossSalary = ""
-        yearlyBonus = ""
-        selectedType = defaultTaxpayerType
-        selectedAssessmentType = defaultAssessmentType
-        selectedIncomeYear = defaultIncomeYear
-        selectedTaxpayerLocationId = defaultTaxpayerLocation.id
-        disabledDependentCount = 0
-        adjustableSourceTax = ""
-        advanceTax = ""
-        investments = emptyList()
+        calculatorViewModel.reset()
+        consultationDismissed = false
         pendingPdfReport = null
         hasLoggedTaxCalculation = false
         hasLoggedTaxCreditUsage = false
@@ -568,34 +579,34 @@ fun TaxCalculatorScreen(
                         yearRules = yearRules,
                         selectedIncomeYear = selectedIncomeYear,
                         onIncomeYearChange = {
-                            selectedIncomeYear = it
+                            calculatorViewModel.setIncomeYear(it)
                             LocalTaxPreferenceStore.setIncomeYear(context, it)
                         },
                         taxpayerTypes = taxpayerTypes,
                         selectedType = selectedType,
                         onTypeSelect = {
-                            selectedType = it
+                            calculatorViewModel.setTaxpayerType(it)
                             LocalTaxPreferenceStore.setDefaultTaxpayerType(context, it)
                         },
                         disabledDependentCount = disabledDependentCount,
-                        onDisabledDependentCountChange = {
-                            disabledDependentCount = it.coerceIn(0, MaxDisabledDependentCount)
-                        },
+                        onDisabledDependentCountChange = calculatorViewModel::setDisabledDependentCount,
                         assessmentType = selectedAssessmentType,
                         onAssessmentTypeChange = {
-                            selectedAssessmentType = it
+                            calculatorViewModel.setAssessmentType(it)
                             LocalTaxPreferenceStore.setAssessmentType(context, it)
                         },
                         selectedMinimumTax = minimumTax,
                         taxpayerLocation = taxpayerLocation,
                         onTaxpayerLocationChange = {
-                            selectedTaxpayerLocationId = it.id
+                            calculatorViewModel.setTaxpayerLocation(it.id)
                             LocalTaxPreferenceStore.setTaxpayerLocation(context, it)
                         },
                         grossSalary = grossSalary,
                         yearlyBonus = yearlyBonus,
-                        onGrossSalaryChange = { grossSalary = it },
-                        onYearlyBonusChange = { yearlyBonus = it },
+                        otherIncome = otherIncome,
+                        onOtherIncomeChange = calculatorViewModel::setOtherIncome,
+                        onGrossSalaryChange = calculatorViewModel::setGrossSalary,
+                        onYearlyBonusChange = calculatorViewModel::setYearlyBonus,
                     )
 
                     if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
@@ -603,8 +614,8 @@ fun TaxCalculatorScreen(
                             adjustment = paymentAdjustment,
                             adjustableSourceTax = adjustableSourceTax,
                             advanceTax = advanceTax,
-                            onAdjustableSourceTaxChange = { adjustableSourceTax = it },
-                            onAdvanceTaxChange = { advanceTax = it }
+                            onAdjustableSourceTaxChange = calculatorViewModel::setAdjustableSourceTax,
+                            onAdvanceTaxChange = calculatorViewModel::setAdvanceTax
                         )
                     }
 
@@ -612,20 +623,9 @@ fun TaxCalculatorScreen(
 
                     InvestmentInputSection(
                         investments = investments,
-                        onInvestmentAdd = { type ->
-                            val option = TaxDefaults.investmentOptions.firstOrNull { it.type == type }
-                            if (option != null && investments.none { it.type == type }) {
-                                investments = investments + option
-                            }
-                        },
-                        onInvestmentChange = { type, value ->
-                            investments = investments.map {
-                                if (it.type == type) it.copy(amount = value) else it
-                            }
-                        },
-                        onInvestmentRemove = { type ->
-                            investments = investments.filterNot { it.type == type }
-                        }
+                        onInvestmentAdd = calculatorViewModel::addInvestment,
+                        onInvestmentChange = calculatorViewModel::updateInvestment,
+                        onInvestmentRemove = calculatorViewModel::removeInvestment
                     )
 
                     if (salaryBreakdown.taxableIncome > effectiveTaxFreeLimit) {
@@ -643,6 +643,14 @@ fun TaxCalculatorScreen(
                         )
                     } else {
                         TaxBreakdownCard(result = result)
+                    }
+
+                    // A passive next step after the result, never an input-completion prompt.
+                    if (salaryBreakdown.totalIncome > 0L && !consultationDismissed) {
+                        LawyerConsultationBanner(
+                            onOpen = onOpenLawyerBooking,
+                            onDismiss = { consultationDismissed = true }
+                        )
                     }
 
                     TaxSourceDisclaimerCard()
@@ -1180,6 +1188,8 @@ private fun CalculatorInputHub(
     onTaxpayerLocationChange: (TaxpayerLocation) -> Unit,
     grossSalary: String,
     yearlyBonus: String,
+    otherIncome: String,
+    onOtherIncomeChange: (String) -> Unit,
     onGrossSalaryChange: (String) -> Unit,
     onYearlyBonusChange: (String) -> Unit,
 ) {
@@ -1251,6 +1261,25 @@ private fun CalculatorInputHub(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 GrossSalaryInput(grossSalary, yearlyBonus, onGrossSalaryChange, onYearlyBonusChange)
+                HorizontalDivider(color = CalculatorBorder)
+                SectionLabel(
+                    localizedText("অন্যান্য আয় (ঐচ্ছিক)", "Other Income (Optional)"),
+                    localizedText("বেতন ও বোনাস ছাড়া অন্যান্য উৎসের আয়", "Income from sources other than salary and bonus")
+                )
+                CurrencyInputField(
+                    value = otherIncome,
+                    onValueChange = onOtherIncomeChange,
+                    label = localizedText("বার্ষিক অন্যান্য করযোগ্য আয়", "Annual other taxable income"),
+                    placeholder = "0"
+                )
+                Text(
+                    localizedText(
+                        "ফ্রিল্যান্স, ভাড়া, বিনিয়োগ বা অন্য উৎসের আয় থেকে শুধু সাধারণ কর স্ল্যাবে যোগযোগ্য বার্ষিক নিট করযোগ্য অংশ দিন। করমুক্ত, বিশেষ হার বা চূড়ান্ত করের আয় এখানে দেবেন না। উৎসভিত্তিক খরচ ও ছাড় স্বয়ংক্রিয়ভাবে হিসাব করা হয় না; এই টাকার ওপর বেতন ছাড় প্রযোজ্য হবে না।",
+                        "For freelance, rental, investment or other income, enter only the annual net taxable portion subject to ordinary tax slabs. Exclude exempt, special-rate or final-tax income. Source-specific expenses and exemptions are not calculated automatically; salary exemption does not apply to this amount."
+                    ),
+                    fontSize = 11.sp, lineHeight = 17.sp,
+                    fontFamily = TiroBanglaFontFamily, color = CalculatorMuted
+                )
             }
         }
     }
@@ -1587,11 +1616,11 @@ private fun TaxInfoDialog(yearRules: TaxYearRules, onDismiss: () -> Unit) {
                     fontFamily = TiroBanglaFontFamily
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BulletInfoRow(localizedText("মাসিক মোট বেতন × ১২ + বার্ষিক বোনাস = মোট বার্ষিক আয়।", "Monthly gross salary × 12 + yearly bonus = total annual income."))
+                    BulletInfoRow(localizedText("মাসিক মোট বেতন × ১২ + বার্ষিক বোনাস + অন্যান্য করযোগ্য আয় = হিসাবে অন্তর্ভুক্ত মোট বার্ষিক আয়।", "Monthly gross salary × 12 + yearly bonus + other taxable income = total annual income included in this estimate."))
                     BulletInfoRow(
                         if (yearRules.salaryExemptionCap > 0L) localizedText(
-                            "বেতন আয়ের ছাড় হিসেবে মোট আয়ের ১/৩ অংশ অথবা ${formatBengaliNumber(yearRules.salaryExemptionCap)} টাকা, যেটি কম, বাদ দেওয়া হয়।",
-                            "As salary exemption, the lower of 1/3 of total income or BDT ${formatBengaliNumber(yearRules.salaryExemptionCap)} is deducted."
+                            "বেতন আয়ের ছাড় হিসেবে শুধু বার্ষিক বেতন ও বোনাসের ১/৩ অংশ অথবা ${formatBengaliNumber(yearRules.salaryExemptionCap)} টাকা, যেটি কম, বাদ দেওয়া হয়। অন্যান্য আয়ে এই ছাড় নেই।",
+                            "Salary exemption is the lower of 1/3 of annual salary plus bonus or BDT ${formatBengaliNumber(yearRules.salaryExemptionCap)}. Other income does not receive this exemption."
                         ) else localizedText(
                             "এই পুরোনো আয়বর্ষে বাড়িভাড়া, চিকিৎসা ও যাতায়াত ভাতার তৎকালীন পৃথক সীমা অনুযায়ী বেতন ছাড় হিসাব করা হয়।",
                             "For this older income year, salary exemption uses the then-applicable separate limits for house rent, medical, and conveyance allowances."
@@ -1845,8 +1874,10 @@ private fun SalaryBreakdownCard(salary: SalaryBreakdown) {
                     YearlyItem(localizedText("নিট করযোগ্য আয়", "Net Taxable Income"), salary.taxableIncome, isTotal = true)
                 }
             ) {
-                YearlyItem(localizedText("মোট বাৎসরিক বেতন", "Total Annual Income"), salary.totalIncome)
+                YearlyItem(localizedText("মোট বাৎসরিক বেতন", "Total Annual Salary"), salary.grossSalary * 12)
                 YearlyItem(localizedText("মোট বোনাস", "Total Bonus"), salary.yearlyBonus)
+                YearlyItem(localizedText("অন্যান্য করযোগ্য আয়", "Other Taxable Income"), salary.otherIncome)
+                YearlyItem(localizedText("মোট বার্ষিক আয়", "Total Annual Income"), salary.totalIncome)
                 YearlyItem(localizedText("স্ট্যান্ডার্ড ছাড়", "Standard Exemption"), salary.totalExemption, isExempt = true)
             }
         }

@@ -6,7 +6,8 @@ import java.util.Locale
 fun calculateSalaryBreakdown(
     grossSalary: Long,
     yearlyBonus: Long,
-    rules: TaxYearRules = TaxYearCatalog.current
+    rules: TaxYearRules = TaxYearCatalog.current,
+    otherIncome: Long = 0L
 ): SalaryBreakdown {
     val conveyance = (grossSalary * 0.05).roundToLong()
     val basicSalary = ((grossSalary - conveyance) / 1.6).roundToLong()
@@ -40,9 +41,11 @@ fun calculateSalaryBreakdown(
         conveyance = conveyance,
         otherAllowances = otherAllowances,
         yearlyBonus = yearlyBonus,
-        totalIncome = totalIncome,
+        // Other income is already net, ordinary-slab taxable income, not salary.
+        totalIncome = totalIncome + otherIncome.coerceAtLeast(0L),
         totalExemption = totalExemption,
-        taxableIncome = maxOf(0L, totalIncome - totalExemption)
+        taxableIncome = maxOf(0L, totalIncome - totalExemption) + otherIncome.coerceAtLeast(0L),
+        otherIncome = otherIncome.coerceAtLeast(0L)
     )
 }
 
